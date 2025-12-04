@@ -2,6 +2,35 @@ import 'package:flutter/material.dart';
 import 'dart:developer';
 import 'package:flutter_notification_listener/flutter_notification_listener.dart';
 
+String? _lastTitle;
+String? _lastArtist;
+
+// App runs in the background to handle incoming notifications
+@pragma('vm:entry-point')
+// Callback executed inside seperate background dart isolate
+void _callback(NotificationEvent evt) {
+  // Prevent logging every second
+  if (evt.title == _lastTitle) {
+    return;
+  }
+
+  final allowedPackages = {
+    'com.spotify.music',
+    'com.google.android.apps.youtube.music',
+    'com.soundcloud.android',
+  };
+
+  // If not music notification, ignore
+  if (evt.packageName == null || !allowedPackages.contains(evt.packageName)) {
+    return;
+  }
+
+  _lastArtist = evt.text;
+  _lastTitle = evt.title;
+
+  print("Current song: $_lastTitle by $_lastArtist");
+}
+
 void main() {
   runApp(const MaterialApp(home: ScrobblerHome()));
 }
@@ -21,55 +50,64 @@ class _ScrobblerHomeState extends State<ScrobblerHome> {
   @override
   void initState() {
     super.initState();
-    initScrobbler();
-  }
-
-  // App runs in the background to handle incoming notifications
-  @pragma('vm:entry-point')
-  // Callback executed inside seperate background dart isolate
-  static void _callback(NotificationEvent evt) {
-    log("BACKGROUND: ${evt.title} by ${evt.text} [${evt.packageName}]");
+    // Delay initialisation to avoid app crash
+    Future.delayed(Duration(milliseconds: 500), () {
+      initScrobbler();
+    });
   }
 
   Future<void> initScrobbler() async {
-    bool? hasPermission = await NotificationsListener.hasPermission;
-    if (!hasPermission!) {
-      // If no permission, open settings
-      NotificationsListener.openPermissionSettings();
-      return;
-    }
-
     try {
+      bool? hasPermission = await NotificationsListener.hasPermission;
+      log("Has permission : $hasPermission");
+
+      if (hasPermission == null || !hasPermission) {
+        log("No permission, opening settings");
+        // If no permission, open settings
+        NotificationsListener.openPermissionSettings();
+        return;
+      }
+
       NotificationsListener.initialize(callbackHandle: _callback);
 
-      // Connects background isolate to main UI isolate (transfers data to main UI isolate)
+      // Connects background isolate to main UI isolate (recieves data from background isolate)
       NotificationsListener.receivePort?.listen((event) {
         _onDataRecieved(event);
       });
 
-      setState(() {
-        _isListening = true;
-      });
+      if (mounted) {
+        setState(() {
+          _isListening = true;
+        });
+      }
+      log("Service started successfully");
     } catch (e) {
       log("Initialisation Error: $e");
+
+      if (mounted) {
+        setState(() {
+          _isListening = false;
+          _currentSong = "Error: $e";
+        });
+      }
     }
   }
 
   void _onDataRecieved(NotificationEvent event) {
     if (event.title == null) return;
 
-    // Add logic to filter out other notification keeping only songs
-
-    setState(() {
-      _currentSong = event.title ?? "Unknown";
-      _currentPackage = event.packageName ?? "Unknown";
-    });
+    if (mounted) {
+      setState(() {
+        _currentSong = event.title ?? "Unknown";
+        _currentPackage = event.packageName ?? "Unknown";
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Notification Reader)")),
+      appBar: AppBar(title: Text("Notification Reader")),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
