@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
+import 'dart:isolate';
 import 'dart:developer';
 import 'package:flutter_notification_listener/flutter_notification_listener.dart';
 
 String? _lastTitle;
 String? _lastArtist;
+const String _portName =
+    "notification_send_port"; // port name for communication between isolates
 
 // App runs in the background to handle incoming notifications
 @pragma('vm:entry-point')
@@ -29,6 +33,14 @@ void _callback(NotificationEvent evt) {
   _lastTitle = evt.title;
 
   print("Current song: $_lastTitle by $_lastArtist");
+
+  // Sending data to main UI isolate
+  final SendPort? send = IsolateNameServer.lookupPortByName(_portName);
+  if (send == null) {
+    print("!!UI port not found!!");
+  } else {
+    send.send(evt);
+  }
 }
 
 void main() {
@@ -45,7 +57,10 @@ class ScrobblerHome extends StatefulWidget {
 class _ScrobblerHomeState extends State<ScrobblerHome> {
   String _currentSong = "No song detected";
   String _currentPackage = "Waiting...";
+  String _songArtist = "";
   bool _isListening = false;
+
+  final ReceivePort _port = ReceivePort();
 
   @override
   void initState() {
@@ -58,6 +73,17 @@ class _ScrobblerHomeState extends State<ScrobblerHome> {
 
   Future<void> initScrobbler() async {
     try {
+      // Clear old mapping and register current port
+      IsolateNameServer.removePortNameMapping(_portName);
+      IsolateNameServer.registerPortWithName(_port.sendPort, _portName);
+
+      _port.listen((dynamic data) {
+        if (data is NotificationEvent) {
+          _onDataRecieved(data);
+        }
+      });
+
+      // Standard Permission checks
       bool? hasPermission = await NotificationsListener.hasPermission;
       log("Has permission : $hasPermission");
 
@@ -69,11 +95,6 @@ class _ScrobblerHomeState extends State<ScrobblerHome> {
       }
 
       NotificationsListener.initialize(callbackHandle: _callback);
-
-      // Connects background isolate to main UI isolate (recieves data from background isolate)
-      NotificationsListener.receivePort?.listen((event) {
-        _onDataRecieved(event);
-      });
 
       if (mounted) {
         setState(() {
@@ -95,10 +116,12 @@ class _ScrobblerHomeState extends State<ScrobblerHome> {
 
   void _onDataRecieved(NotificationEvent event) {
     if (event.title == null) return;
+    print("UI recieved event: ${event.title}");
 
     if (mounted) {
       setState(() {
         _currentSong = event.title ?? "Unknown";
+        _songArtist = event.text ?? "Unknown";
         _currentPackage = event.packageName ?? "Unknown";
       });
     }
@@ -116,7 +139,7 @@ class _ScrobblerHomeState extends State<ScrobblerHome> {
             SizedBox(height: 5),
             Text("Last Detected Notification: "),
             Text(
-              _currentSong,
+              "$_currentSong - $_songArtist",
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
             ),
             SizedBox(height: 5),
