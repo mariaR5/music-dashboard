@@ -1,7 +1,11 @@
+import 'dart:convert';
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'dart:isolate';
 import 'dart:developer';
+import 'package:http/http.dart' as http;
 import 'package:flutter_notification_listener/flutter_notification_listener.dart';
 
 String? _lastTitle;
@@ -12,7 +16,7 @@ const String _portName =
 // App runs in the background to handle incoming notifications
 @pragma('vm:entry-point')
 // Callback executed inside seperate background dart isolate
-void _callback(NotificationEvent evt) {
+void _callback(NotificationEvent evt) async {
   // Prevent logging every second
   if (evt.title == _lastTitle) {
     return;
@@ -40,6 +44,25 @@ void _callback(NotificationEvent evt) {
     print("!!UI port not found!!");
   } else {
     send.send(evt);
+  }
+
+  // Send data to python backend
+  const String backendURL = "http://192.168.1.6:8000/scrobble";
+
+  try {
+    final response = await http.post(
+      Uri.parse(backendURL),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        "title": _lastTitle,
+        "artist": _lastArtist,
+        "package": evt.packageName,
+        "timestamp": DateTime.now().millisecondsSinceEpoch,
+      }),
+    );
+    print("Backend response: ${response.statusCode}");
+  } catch (e) {
+    print("Failed to send backend");
   }
 }
 
@@ -85,10 +108,10 @@ class _ScrobblerHomeState extends State<ScrobblerHome> {
 
       // Standard Permission checks
       bool? hasPermission = await NotificationsListener.hasPermission;
-      log("Has permission : $hasPermission");
+      print("Has permission : $hasPermission");
 
       if (hasPermission == null || !hasPermission) {
-        log("No permission, opening settings");
+        print("No permission, opening settings");
         // If no permission, open settings
         NotificationsListener.openPermissionSettings();
         return;
@@ -101,9 +124,9 @@ class _ScrobblerHomeState extends State<ScrobblerHome> {
           _isListening = true;
         });
       }
-      log("Service started successfully");
+      print("Service started successfully");
     } catch (e) {
-      log("Initialisation Error: $e");
+      print("Initialisation Error: $e");
 
       if (mounted) {
         setState(() {
