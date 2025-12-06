@@ -62,7 +62,7 @@ void _callback(NotificationEvent evt) async {
     );
     print("Backend response: ${response.statusCode}");
   } catch (e) {
-    print("Failed to send backend");
+    print("Failed to send backend: $e");
   }
 }
 
