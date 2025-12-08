@@ -43,3 +43,24 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Python
+__pycache__/
+*.pyc
+
+# Virtual envs
+venv/
+backend/venv/
+
+# Env files
+.env
+backend/.env
+
+# SQLite DB
+music.db
+backend/music.db
+
+# Cache
+.cache/
+backend/.cache/
+.cache
