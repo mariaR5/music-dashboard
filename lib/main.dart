@@ -1,12 +1,11 @@
-import 'dart:convert';
-import 'dart:math';
-
-import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'dart:isolate';
-import 'dart:developer';
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_notification_listener/flutter_notification_listener.dart';
+import 'package:scrobbler/dashboard_page.dart';
 
 String? _lastTitle;
 String? _lastArtist;
@@ -150,11 +149,13 @@ class _ScrobblerHomeState extends State<ScrobblerHome> {
     }
   }
 
+  int _selectedIndex = 0; // 0 = Home 1= Dashboard
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text("Notification Reader")),
-      body: Center(
+    final List<Widget> pages = [
+      // Page 1 : Home page
+      Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -177,6 +178,27 @@ class _ScrobblerHomeState extends State<ScrobblerHome> {
             ),
           ],
         ),
+      ),
+
+      // Page 2 : Dashboard
+      const DashboardPage(),
+    ];
+
+    return Scaffold(
+      appBar: AppBar(title: Text("Universal Scrobbler")),
+      body: pages[_selectedIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: (index) => setState(() {
+          _selectedIndex = index;
+        }),
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.hearing), label: "Live"),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.analytics),
+            label: "Dashbaord",
+          ),
+        ],
       ),
     );
   }
