@@ -23,11 +23,16 @@ class TopSong {
 
 class TopArtist {
   final String artist;
+  final String? artistImage;
   final int plays;
 
-  TopArtist({required this.artist, required this.plays});
+  TopArtist({required this.artist, this.artistImage, required this.plays});
 
   factory TopArtist.fromJson(Map<String, dynamic> json) {
-    return TopArtist(artist: json["artist"], plays: json["plays"]);
+    return TopArtist(
+      artist: json["artist"],
+      artistImage: json["artist_image"],
+      plays: json["plays"],
+    );
   }
 }

@@ -110,7 +110,12 @@ class _DashboardPageState extends State<DashboardPage> {
             ..._topArtists.map(
               (artist) => Card(
                 child: ListTile(
-                  leading: const Icon(Icons.person),
+                  leading: artist.artistImage != null
+                      ? CircleAvatar(
+                          radius: 25,
+                          backgroundImage: NetworkImage(artist.artistImage!),
+                        )
+                      : const Icon(Icons.person),
                   title: Text(
                     artist.artist,
                     style: TextStyle(fontWeight: FontWeight.bold),

@@ -42,6 +42,7 @@ class Scrobble(SQLModel, table=True):
     # Spotify data
     spotify_id: Optional[str] = None
     image_url: Optional[str] = None
+    artist_image: Optional[str] = None
     tempo: Optional[float] = None
     valence: Optional[float] = None
     energy: Optional[float] = None
@@ -70,11 +71,13 @@ def enrich_data(title: str, artist: str):
 
         artist_id = track["artists"][0]["id"]
         artist_info = sp.artist(artist_id)
+        artist_image = artist_info["images"][0]["url"]
         genre_list = artist_info["genres"] # Returns a list of genres
 
         return {
             "spotify_id": t_id,
             "image_url": track["album"]["images"][0]["url"],
+            "artist_image": artist_image,
             "tempo": None, # features["tempo"],
             "valence": None, # features["valence"],
             "energy": None, # features["energy"],
@@ -164,7 +167,7 @@ def get_top_songs(session: Session = Depends(get_session)):
 @app.get("/stats/top-artists")
 def get_top_artists(session: Session = Depends(get_session)):
     query = (
-        select(Scrobble.artist, func.count(Scrobble.id).label("plays"))
+        select(Scrobble.artist, Scrobble.artist_image, func.count(Scrobble.id).label("plays"))
         .group_by(Scrobble.artist)
         .order_by(func.count(Scrobble.id).desc())
         .limit(5)
@@ -173,7 +176,7 @@ def get_top_artists(session: Session = Depends(get_session)):
     results = session.exec(query).all()
 
     return [
-        {"artist": row.artist, "plays": row.plays}
+        {"artist": row.artist, "artist_image": row.artist_image, "plays": row.plays}
         for row in results
     ]
 
