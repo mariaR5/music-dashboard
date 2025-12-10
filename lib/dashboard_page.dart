@@ -18,6 +18,9 @@ class _DashboardPageState extends State<DashboardPage> {
   List<TopArtist> _topArtists = [];
   List<dynamic> _recommendations = [];
   String _recMessage = "No recommendations";
+
+  int _selectedMonth = 0; // 0: All time, 1: Jan, 2: Feb,.....
+
   bool _isLoading = true;
 
   @override
@@ -28,12 +31,21 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Future<void> fetchStats() async {
+    String queryParams = ""; // empty query for all time
+    if (_selectedMonth != 0) {
+      queryParams = "?month=$_selectedMonth&year=2025";
+    }
+
     try {
       // Fetch data from server
-      final resTotal = await http.get(Uri.parse("$baseUrl/stats/total"));
-      final resSongs = await http.get(Uri.parse("$baseUrl/stats/top-songs"));
+      final resTotal = await http.get(
+        Uri.parse("$baseUrl/stats/total$queryParams"),
+      );
+      final resSongs = await http.get(
+        Uri.parse("$baseUrl/stats/top-songs$queryParams"),
+      );
       final resArtists = await http.get(
-        Uri.parse("$baseUrl/stats/top-artists"),
+        Uri.parse("$baseUrl/stats/top-artists$queryParams"),
       );
       final resRecs = await http.get(Uri.parse("$baseUrl/recommend"));
 
@@ -77,6 +89,29 @@ class _DashboardPageState extends State<DashboardPage> {
           "Your listening vibe",
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 25),
         ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: DropdownButton<int>(
+              value: _selectedMonth,
+              icon: Icon(Icons.filter_alt, color: Colors.black, size: 28),
+              underline: Container(),
+              items: [
+                DropdownMenuItem(value: 0, child: Text("All Time")),
+                DropdownMenuItem(value: 11, child: Text("November")),
+                DropdownMenuItem(value: 12, child: Text("December")),
+              ],
+              onChanged: (int? newValue) {
+                if (newValue != null) {
+                  setState(() {
+                    _selectedMonth = newValue;
+                  });
+                  fetchStats();
+                }
+              },
+            ),
+          ),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: fetchStats,

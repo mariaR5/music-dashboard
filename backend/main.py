@@ -3,7 +3,7 @@ import random
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends
 from sqlmodel import SQLModel, Session, create_engine, Field, select
-from sqlalchemy import func
+from sqlalchemy import func, extract
 from typing import Optional, List
 from datetime import datetime, timezone
 import spotipy
@@ -144,9 +144,24 @@ def read_history(session: Session = Depends(get_session)):
     ).all()
     return scrobbles
 
+#---------STATS-----------
+
+# Apply month, year filters to query
+def apply_date_filter(query, month: Optional[int], year: Optional[int]):
+    # If month is specified, update the query to filter data where month[created_at] == month
+    if month:
+        query = query.where(extract('month', Scrobble.created_at) ==  month)
+    if year:
+        query = query.where(extract('year', Scrobble.created_at) == year)
+    return query
+
 # Get top 5 songs
 @app.get("/stats/top-songs")
-def get_top_songs(session: Session = Depends(get_session)):
+def get_top_songs(
+    month: Optional[int] = None,
+    year: Optional[int] = None,
+    session: Session = Depends(get_session)
+    ):
     # Select title, artist, image_url, count(id) as plays from Scrobble 
     # group by title, artist, img_url
     # order by plays desc
@@ -157,6 +172,10 @@ def get_top_songs(session: Session = Depends(get_session)):
         .order_by(func.count(Scrobble.id).desc())
         .limit(5)
     )
+
+    # Filter query with month and year
+    query = apply_date_filter(query, month, year)
+
     result = session.exec(query).all() # Returns list of top 5 songs
 
     return [
@@ -166,13 +185,18 @@ def get_top_songs(session: Session = Depends(get_session)):
 
 # Get top 5 artists
 @app.get("/stats/top-artists")
-def get_top_artists(session: Session = Depends(get_session)):
+def get_top_artists(
+    month: Optional[int] = None,
+    year: Optional[int] = None,
+    session: Session = Depends(get_session)
+    ):
     query = (
         select(Scrobble.artist, Scrobble.artist_image, func.count(Scrobble.id).label("plays"))
         .group_by(Scrobble.artist)
         .order_by(func.count(Scrobble.id).desc())
         .limit(5)
     )
+    query = apply_date_filter(query, month, year)
 
     results = session.exec(query).all()
 
@@ -183,8 +207,13 @@ def get_top_artists(session: Session = Depends(get_session)):
 
 # Get total plays
 @app.get("/stats/total")
-def get_total_plays(session: Session = Depends(get_session)):
+def get_total_plays(
+    month: Optional[int] = None,
+    year: Optional[int] = None,
+    session: Session = Depends(get_session)
+    ):
     query = select(func.count(Scrobble.id))
+    query = apply_date_filter(query, month, year)
 
     result = session.exec(query).one()
     return {"total_plays": result}
@@ -206,7 +235,7 @@ def get_recommendations(session: Session = Depends(get_session)):
     
     try:
         # Search for the artist and get artist id
-        search = sp.search(q=f"artist: {top_artist_name}", type="artist", limit=1)
+        search = sp.search(q=f"artist:{top_artist_name}", type="artist", limit=1)
         if not search['artists']['items']:
             return []
         
@@ -216,7 +245,6 @@ def get_recommendations(session: Session = Depends(get_session)):
             return {"message" : f"No genres found for {top_artist_name} on Spotify"}
         
         seed_genre = top_artist_genres[0]
-        print(f"Top artist: {top_artist_name} | Genre: {seed_genre}")
 
         offset = random.randint(0, 50)
 
