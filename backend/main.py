@@ -1,4 +1,5 @@
 import os
+import random
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends
 from sqlmodel import SQLModel, Session, create_engine, Field, select
@@ -188,8 +189,62 @@ def get_total_plays(session: Session = Depends(get_session)):
     result = session.exec(query).one()
     return {"total_plays": result}
 
+# Recommendation engine => Recommend random songs that match the top artist's genre
+@app.get("/recommend")
+def get_recommendations(session: Session = Depends(get_session)):
+    # get top artist
+    query = (
+        select(Scrobble.artist)
+        .group_by(Scrobble.artist)
+        .order_by(func.count(Scrobble.id)
+        .desc()).limit(1)
+    )
+    top_artist_name = session.exec(query).first()
 
+    if not top_artist_name:
+        return {"message" : "Not enough data yet! Listen to more music."}
+    
+    try:
+        # Search for the artist and get artist id
+        search = sp.search(q=f"artist: {top_artist_name}", type="artist", limit=1)
+        if not search['artists']['items']:
+            return []
+        
+        top_artist_genres = search['artists']['items'][0]['genres']
 
+        if not top_artist_genres:
+            return {"message" : f"No genres found for {top_artist_name} on Spotify"}
+        
+        seed_genre = top_artist_genres[0]
+        print(f"Top artist: {top_artist_name} | Genre: {seed_genre}")
+
+        offset = random.randint(0, 50)
+
+        # Search spotify for 10 tracks with specified genre (starting from offset position)
+        recs = sp.search(q=f'genre:{seed_genre}', type='track', limit=10, offset=10)
+
+        # List to store recommended songs
+        recommendations = []
+
+        # Get the top track by each related artist -> add to list
+        for track in recs['tracks']['items']:
+            # Dont recommend artist we already listen to
+            if track['artists'][0]['name'] == top_artist_name:
+                continue
+
+            recommendations.append({
+                "title": track["name"],
+                "artist": track["artists"][0]["name"],
+                "image_url": track["album"]["images"][0]["url"],
+                "reason": f"Because you listened to {seed_genre}"
+
+            })
+        
+        return recommendations
+    except Exception as e:
+        print(f"Recommendation Error")
+        return []
+    
 
 # Health check
 @app.get("/") # "/" sending request to root path

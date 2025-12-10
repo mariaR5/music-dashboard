@@ -16,6 +16,8 @@ class _DashboardPageState extends State<DashboardPage> {
   int _totalPlays = 0;
   List<TopSong> _topSongs = [];
   List<TopArtist> _topArtists = [];
+  List<dynamic> _recommendations = [];
+  String _recMessage = "No recommendations";
   bool _isLoading = true;
 
   @override
@@ -33,6 +35,7 @@ class _DashboardPageState extends State<DashboardPage> {
       final resArtists = await http.get(
         Uri.parse("$baseUrl/stats/top-artists"),
       );
+      final resRecs = await http.get(Uri.parse("$baseUrl/recommend"));
 
       if (resTotal.statusCode == 200 &&
           resArtists.statusCode == 200 &&
@@ -45,6 +48,11 @@ class _DashboardPageState extends State<DashboardPage> {
 
           final List<dynamic> artistList = jsonDecode(resArtists.body);
           _topArtists = artistList.map((e) => TopArtist.fromJson(e)).toList();
+
+          if (resRecs.statusCode == 200) {
+            _recommendations = jsonDecode(resRecs.body);
+            _recMessage = _recommendations[0]["reason"];
+          }
 
           _isLoading = false;
         });
@@ -64,15 +72,74 @@ class _DashboardPageState extends State<DashboardPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text("Your listening vibe")),
+      appBar: AppBar(
+        title: Text(
+          "Your listening vibe",
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 25),
+        ),
+      ),
       body: RefreshIndicator(
         onRefresh: fetchStats,
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
             //---Total Plays---
-            _buildStatCard("Total Plays", "$_totalPlays", Colors.blue),
-            const SizedBox(height: 20),
+            _buildStatCard("Total Plays", "$_totalPlays", Colors.red),
+            const SizedBox(height: 30),
+
+            //---Recommendations---
+            if (_recommendations.isNotEmpty) ...[
+              Text(
+                _recMessage,
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                height: 200,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _recommendations.length,
+                  itemBuilder: (context, index) {
+                    final song = _recommendations[index];
+                    return Container(
+                      width: 140,
+                      margin: const EdgeInsets.only(right: 10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              song["image_url"],
+                              height: 140,
+                              width: 140,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          const SizedBox(height: 5),
+                          Text(
+                            song["title"],
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            song["artist"],
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
 
             //---Top Songs---
             const Text(
