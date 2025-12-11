@@ -218,6 +218,7 @@ def get_total_plays(
     result = session.exec(query).one()
     return {"total_plays": result}
 
+
 # Recommendation engine => Recommend random songs that match the top artist's genre
 @app.get("/recommend")
 def get_recommendations(session: Session = Depends(get_session)):
@@ -249,7 +250,7 @@ def get_recommendations(session: Session = Depends(get_session)):
         offset = random.randint(0, 50)
 
         # Search spotify for 10 tracks with specified genre (starting from offset position)
-        recs = sp.search(q=f'genre:{seed_genre}', type='track', limit=10, offset=10)
+        recs = sp.search(q=f'genre:{seed_genre}', type='track', limit=10, offset=offset)
 
         # List to store recommended songs
         recommendations = []

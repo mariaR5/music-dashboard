@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'dart:async';
 import 'dart:isolate';
 import 'dart:convert';
 
@@ -9,6 +10,7 @@ import 'package:scrobbler/dashboard_page.dart';
 
 String? _lastTitle;
 String? _lastArtist;
+Timer? _scrobbleTimer;
 const String _portName =
     "notification_send_port"; // port name for communication between isolates
 
@@ -35,7 +37,7 @@ void _callback(NotificationEvent evt) async {
   _lastArtist = evt.text;
   _lastTitle = evt.title;
 
-  print("Current song: $_lastTitle by $_lastArtist");
+  print("Detect: $_lastTitle by $_lastArtist (Waiting 30s to confirm)");
 
   // Sending data to main UI isolate
   final SendPort? send = IsolateNameServer.lookupPortByName(_portName);
@@ -45,24 +47,32 @@ void _callback(NotificationEvent evt) async {
     send.send(evt);
   }
 
-  // Send data to python backend
-  const String backendURL = "http://192.168.1.6:8000/scrobble";
+  // Cancel previous song's timer
+  _scrobbleTimer?.cancel();
 
-  try {
-    final response = await http.post(
-      Uri.parse(backendURL),
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({
-        "title": _lastTitle,
-        "artist": _lastArtist,
-        "package": evt.packageName,
-        "timestamp": DateTime.now().millisecondsSinceEpoch,
-      }),
-    );
-    print("Backend response: ${response.statusCode}");
-  } catch (e) {
-    print("Failed to send backend: $e");
-  }
+  // Send data to backend only if user listens to atleast 30 seconds
+  _scrobbleTimer = Timer(const Duration(seconds: 30), () async {
+    print("Scrobble confirmed: $_lastTitle");
+
+    // Send data to python backend
+    const String backendURL = "http://192.168.1.6:8000/scrobble";
+
+    try {
+      final response = await http.post(
+        Uri.parse(backendURL),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "title": _lastTitle,
+          "artist": _lastArtist,
+          "package": evt.packageName,
+          "timestamp": DateTime.now().millisecondsSinceEpoch,
+        }),
+      );
+      print("Backend response: ${response.statusCode}");
+    } catch (e) {
+      print("Failed to send backend: $e");
+    }
+  });
 }
 
 void main() {
