@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:scrobbler/stats_model.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -77,6 +78,13 @@ class _DashboardPageState extends State<DashboardPage> {
     }
   }
 
+  Future<void> _lauchSpotify(String url) async {
+    final Uri uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      throw Exception("Could not launch $url");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -136,38 +144,47 @@ class _DashboardPageState extends State<DashboardPage> {
                   itemCount: _recommendations.length,
                   itemBuilder: (context, index) {
                     final song = _recommendations[index];
-                    return Container(
-                      width: 140,
-                      margin: const EdgeInsets.only(right: 10),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.network(
-                              song["image_url"],
-                              height: 140,
-                              width: 140,
-                              fit: BoxFit.cover,
+                    return GestureDetector(
+                      onTap: () {
+                        if (song["external_url"] != null) {
+                          _lauchSpotify(song["external_url"]);
+                        }
+                      },
+                      child: Container(
+                        width: 140,
+                        margin: const EdgeInsets.only(right: 10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                song["image_url"],
+                                height: 140,
+                                width: 140,
+                                fit: BoxFit.cover,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 5),
-                          Text(
-                            song["title"],
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            song["artist"],
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey,
+                            const SizedBox(height: 5),
+                            Text(
+                              song["title"],
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ),
-                        ],
+                            Text(
+                              song["artist"],
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     );
                   },

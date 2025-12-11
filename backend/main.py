@@ -265,6 +265,7 @@ def get_recommendations(session: Session = Depends(get_session)):
                 "title": track["name"],
                 "artist": track["artists"][0]["name"],
                 "image_url": track["album"]["images"][0]["url"],
+                "external_url": track["external_urls"]["spotify"],
                 "reason": f"Because you listened to {seed_genre}"
 
             })
