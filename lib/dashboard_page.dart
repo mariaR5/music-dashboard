@@ -12,7 +12,7 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  final String baseUrl = "http://192.168.1.6:8000";
+  final String baseUrl = "http://10.140.70.78:8000";
 
   int _totalPlays = 0;
   List<TopSong> _topSongs = [];
