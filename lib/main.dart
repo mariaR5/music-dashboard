@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_notification_listener/flutter_notification_listener.dart';
 import 'package:scrobbler/dashboard_page.dart';
+import 'package:scrobbler/recommendation_page.dart';
 
 String? _lastTitle;
 String? _lastArtist;
@@ -190,7 +191,10 @@ class _ScrobblerHomeState extends State<ScrobblerHome> {
         ),
       ),
 
-      // Page 2 : Dashboard
+      // Page 2 : Recommendations
+      const RecommendationPage(),
+
+      // Page 3 : Dashboard
       const DashboardPage(),
     ];
 
@@ -204,6 +208,7 @@ class _ScrobblerHomeState extends State<ScrobblerHome> {
         }),
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.hearing), label: "Live"),
+          BottomNavigationBarItem(icon: Icon(Icons.explore), label: "Discover"),
           BottomNavigationBarItem(
             icon: Icon(Icons.analytics),
             label: "Dashbaord",

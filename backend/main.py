@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 import google.genai as genai
+import lyricsgenius
 
 # Load secrets from .env
 load_dotenv()
@@ -186,8 +187,6 @@ def get_top_songs(
     ]
 
 
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-
 # Get top 5 artists
 @app.get("/stats/top-artists")
 def get_top_artists(
@@ -224,7 +223,11 @@ def get_total_plays(
     return {"total_plays": result}
 
 
-# Recommendation engine => Recommend random songs that match the top artist's genre
+# Recommendation engine => Recommend songs with the same flow and vibe as the top song
+# Integrates Gemini API
+
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+
 @app.get("/recommend")
 def get_recommendations(session: Session = Depends(get_session)):
     # get top artist
@@ -300,6 +303,112 @@ def get_recommendations(session: Session = Depends(get_session)):
     except Exception as e:
         print(f"AI error: {e}")
         return []
+    
+# Recommendation engine => Recommend songs with lyrical similarity as the top song
+genius = lyricsgenius.Genius(os.getenv("GENIUS_ACCESS_TOKEN"), timeout=15, retries=3)
+genius.remove_section_headers = True # Remove headers ([Chorus] [Verse])
+genius.verbose = False # Turn off status messages
+
+@app.get("/recommend/lyrics")
+def get_lyrical_recommendations(session: Session = Depends(get_session)):
+    print("Started lyrical analysis engine")
+
+    # get top song
+    query = (
+        select(Scrobble.title, Scrobble.artist)
+        .group_by(Scrobble.title, Scrobble.artist)
+        .order_by(func.count(Scrobble.id).desc())
+        .limit(1)
+    )
+    top_track = session.exec(query).first()
+
+    if not top_track:
+        return {"message" : "Not enough data yet! Listen to more music."}
+    
+    title, artist = top_track
+    print(f"Analysing lyrics for {title} - {artist}")
+
+    # Fetch lyrics from Genius
+    try:
+        song = genius.search_song(title, artist)
+        if not song:
+            print("Lyrics not found on genius")
+            return []
+        
+        lyrics = song.lyrics
+
+        # Truncate the lyrics to first 1000 charachters
+        lyrics_snippet = lyrics[:1000] + "..."
+        print("Lyrics fetched successfully")
+
+    except Exception as e:
+        print(f"Genius error: {e}")
+        return []
+    
+    # Analyse the lyrics and recommend with Gemini
+    prompt = f"""
+    Here are the lyrics to "{title}" by "{artist}":
+    
+    "{lyrics_snippet}"
+    
+    Step 1: Analyze the deep meaning, story, emotional tone, and narrative of these lyrics.
+    Step 2: Recommend 10 OTHER songs that share this specific LYRICAL THEME or STORY.
+    (Do not just recommend songs by the same artist or genre. Focus on the words/message).
+    
+    Return ONLY a raw JSON list. Format:
+    [
+      {{
+        "title": "Song Name", 
+        "artist": "Artist Name", 
+        "reason": "Explain the lyrical connection (e.g. 'Both songs are about the grief of losing a father...')" 
+      }}
+    ]
+    """
+
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt
+        )
+
+        # Reponse may contain ```json .... ```
+        text_response = response.text.replace("```json", "").replace("```", "").strip()
+        ai_recommendations = json.loads(text_response)
+        print(ai_recommendations)
+
+        # List to store final recommendations
+        recommendations = []
+
+        for song in ai_recommendations:
+            # Skip if it recommends same song
+            if song['title'].lower() == title.lower():
+                continue
+
+            try:
+                query = f"track:{song['title']} artist:{song['artist']}"
+                result = sp.search(q=query, type='track', limit=1)
+
+                items = result['tracks']['items']
+                if items:
+                    track = items[0]
+                    recommendations.append({
+                        "title": track['name'],
+                        "artist": track['artists'][0]['name'],
+                        "image_url": track['album']['images'][0]["url"] if track['album']['images'] else "",
+                        "spotify_url": track['external_urls']['spotify'],
+                        "reason": f"Because you listened to {title}",
+                    })
+            
+            except Exception as e:
+                print(f"Error in {song['title']} : {e}")
+                continue
+        
+        return recommendations
+
+    except Exception as e:
+        print(f"AI error: {e}")
+        return []
+
 
 # Health check
 @app.get("/") # "/" sending request to root path
