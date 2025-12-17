@@ -55,7 +55,7 @@ void _callback(NotificationEvent evt) async {
     print("Scrobble confirmed: $_lastTitle");
 
     // Send data to python backend
-    const String backendURL = "http://192.168.1.6:8000/scrobble";
+    const String backendURL = "http://10.140.70.78:8000/scrobble";
 
     try {
       final response = await http.post(

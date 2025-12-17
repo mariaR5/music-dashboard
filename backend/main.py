@@ -1,4 +1,5 @@
 import os
+import json
 import random
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends
@@ -8,6 +9,7 @@ from typing import Optional, List
 from datetime import datetime, timezone
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
+import google.genai as genai
 
 # Load secrets from .env
 load_dotenv()
@@ -183,6 +185,9 @@ def get_top_songs(
         for row in result
     ]
 
+
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+
 # Get top 5 artists
 @app.get("/stats/top-artists")
 def get_top_artists(
@@ -224,57 +229,77 @@ def get_total_plays(
 def get_recommendations(session: Session = Depends(get_session)):
     # get top artist
     query = (
-        select(Scrobble.artist)
-        .group_by(Scrobble.artist)
-        .order_by(func.count(Scrobble.id)
-        .desc()).limit(1)
+        select(Scrobble.title, Scrobble.artist)
+        .group_by(Scrobble.title, Scrobble.artist)
+        .order_by(func.count(Scrobble.id).desc())
+        .limit(1)
     )
-    top_artist_name = session.exec(query).first()
+    top_track = session.exec(query).first()
 
-    if not top_artist_name:
+    if not top_track:
         return {"message" : "Not enough data yet! Listen to more music."}
     
+    title, artist = top_track
+    print(f"Analysing vibe for {title} by {artist}")
+
+    # Construct the prompt to get msuci with the same vibe and flow
+    prompt = f"""
+    I am listening to the song "{title}" by "{artist}".
+    
+    Please recommend 10 other songs that have the EXACT same vibe, mood, and musical flow.
+    Focus on the emotional feeling and tempo.
+    Do not just recommend popular hits; include some hidden gems if they fit the vibe perfectly.
+    
+    Return ONLY a raw JSON list with no markdown formatting. 
+    Format:
+    [
+      {{"title": "Song Name", "artist": "Artist Name"}}
+    ]
+    """
+
     try:
-        # Search for the artist and get artist id
-        search = sp.search(q=f"artist:{top_artist_name}", type="artist", limit=1)
-        if not search['artists']['items']:
-            return []
-        
-        top_artist_genres = search['artists']['items'][0]['genres']
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt
+        )
 
-        if not top_artist_genres:
-            return {"message" : f"No genres found for {top_artist_name} on Spotify"}
-        
-        seed_genre = top_artist_genres[0]
+        # Reponse may contain ```json .... ```
+        text_response = response.text.replace("```json", "").replace("```", "").strip()
+        ai_recommendations = json.loads(text_response)
+        print(ai_recommendations)
 
-        offset = random.randint(0, 50)
-
-        # Search spotify for 10 tracks with specified genre (starting from offset position)
-        recs = sp.search(q=f'genre:{seed_genre}', type='track', limit=10, offset=offset)
-
-        # List to store recommended songs
+        # List to store final recommendations
         recommendations = []
 
-        # Get the top track by each related artist -> add to list
-        for track in recs['tracks']['items']:
-            # Dont recommend artist we already listen to
-            if track['artists'][0]['name'] == top_artist_name:
+        for song in ai_recommendations:
+            # Skip if it recommends same song
+            if song['title'].lower() == title.lower():
                 continue
 
-            recommendations.append({
-                "title": track["name"],
-                "artist": track["artists"][0]["name"],
-                "image_url": track["album"]["images"][0]["url"],
-                "external_url": track["external_urls"]["spotify"],
-                "reason": f"Because you listened to {seed_genre}"
+            try:
+                query = f"track:{song['title']} artist:{song['artist']}"
+                result = sp.search(q=query, type='track', limit=1)
 
-            })
+                items = result['tracks']['items']
+                if items:
+                    track = items[0]
+                    recommendations.append({
+                        "title": track['name'],
+                        "artist": track['artists'][0]['name'],
+                        "image_url": track['album']['images'][0]["url"] if track['album']['images'] else "",
+                        "spotify_url": track['external_urls']['spotify'],
+                        "reason": f"Because you listened to {title}",
+                    })
+            
+            except Exception as e:
+                print(f"Error in {song['title']} : {e}")
+                continue
         
         return recommendations
+
     except Exception as e:
-        print(f"Recommendation Error")
+        print(f"AI error: {e}")
         return []
-    
 
 # Health check
 @app.get("/") # "/" sending request to root path
