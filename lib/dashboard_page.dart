@@ -64,7 +64,12 @@ class _DashboardPageState extends State<DashboardPage> {
 
           if (resRecs.statusCode == 200) {
             _recommendations = jsonDecode(resRecs.body);
-            _recMessage = _recommendations[0]["reason"];
+
+            if (_recommendations.isNotEmpty) {
+              _recMessage = _recommendations[0]["reason"];
+            } else {
+              _recMessage = "No recommendations";
+            }
           }
 
           _isLoading = false;
