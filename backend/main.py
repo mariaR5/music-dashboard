@@ -1,5 +1,6 @@
 import os
 import random
+import requests
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends
 from sqlmodel import SQLModel, Session, create_engine, Field, select
@@ -220,60 +221,155 @@ def get_total_plays(
 
 
 # Recommendation engine => Recommend random songs that match the top artist's genre
+
+
+# Helper to get tags from lastfm
+def get_track_tags(artist: str, track: str):
+    api_key = os.getenv("LASTFM_API_KEY")
+
+    if not api_key:
+        print("No Last.fm api key found")
+        return []
+    
+    # Documentation : https://www.last.fm/api
+    url = "http://ws.audioscrobbler.com/2.0" # API endpoint
+    params = {
+        "method" : "track.getTopTags",
+        "track" : track,
+        "artist": artist,
+        "api_key" : api_key,
+        "autocorrect" : 1,
+        "format" : "json"
+    }
+
+    try:
+        response = requests.get(url, params=params)
+        data = response.json()
+
+        # Check if toptags or tags exists
+        raw_tags = data.get("toptags", {}).get("tag", [])
+
+        clean_tags = []
+
+        # Common irrelevant tags
+        BLACKLIST = {
+            "seen live", "favorites", "favourite", "love", "liked",
+            "songs i love", "my favourites", "cool", "awesome",
+            "under 2000 listeners", "under 5000 listeners", "over 1000 listeners",
+            "playlist", "my playlist", "on repeat", "saved",
+            "spotify", "lastfm", "youtube", "mp3",
+            "good", "nice", "random"
+        }
+
+        # Filter out irrelevant tags
+        for tag in raw_tags:
+            tag_name = tag["name"].lower()
+
+            if tag_name in BLACKLIST or tag_name == artist.lower():
+                continue
+            clean_tags.append(tag_name)
+        
+        return clean_tags[:5] # Return top 5 tags
+    
+    except Exception as e:
+        print(f"Last.fm error: {e}")
+        return []
+
+
+# Helper to get tracks with given tags
+def get_track_by_tags(tag: str):
+    api_key = os.getenv("LASTFM_API_KEY")
+
+    if not api_key:
+        print("No Last.fm api key found")
+        return []
+    
+    url = "http://ws.audioscrobbler.com/2.0" # API endpoint
+    params = {
+        "method" : "tag.getTopTracks",
+        "tag" : tag,
+        "api_key" : api_key,
+        "format" : "json",
+        "limit" : 50
+    }
+
+    try:
+        response = requests.get(url, params=params)
+        data = response.json()
+        tracks = data.get("toptracks", {}).get("track", [])
+
+        return [{"name" : track["name"], "artist" : track["artist"]["name"]} for track in tracks]
+
+    except Exception as e:
+        print(f"Last.fm Tag Search Error {e}")
+        return []
+    
+
+# Recommendation engine => Recommend songs with the same last fm tags as the top songs
 @app.get("/recommend")
 def get_recommendations(session: Session = Depends(get_session)):
-    # get top artist
+    # get top song
     query = (
-        select(Scrobble.artist)
-        .group_by(Scrobble.artist)
-        .order_by(func.count(Scrobble.id)
-        .desc()).limit(1)
+        select(Scrobble.title, Scrobble.artist)
+        .group_by(Scrobble.title, Scrobble.artist)
+        .order_by(func.count(Scrobble.id).desc())
+        .limit(1)
     )
-    top_artist_name = session.exec(query).first()
+    top_track = session.exec(query).first()
 
-    if not top_artist_name:
-        return {"message" : "Not enough data yet! Listen to more music."}
-    
-    try:
-        # Search for the artist and get artist id
-        search = sp.search(q=f"artist:{top_artist_name}", type="artist", limit=1)
-        if not search['artists']['items']:
-            return []
-        
-        top_artist_genres = search['artists']['items'][0]['genres']
-
-        if not top_artist_genres:
-            return {"message" : f"No genres found for {top_artist_name} on Spotify"}
-        
-        seed_genre = top_artist_genres[0]
-
-        offset = random.randint(0, 50)
-
-        # Search spotify for 10 tracks with specified genre (starting from offset position)
-        recs = sp.search(q=f'genre:{seed_genre}', type='track', limit=10, offset=offset)
-
-        # List to store recommended songs
-        recommendations = []
-
-        # Get the top track by each related artist -> add to list
-        for track in recs['tracks']['items']:
-            # Dont recommend artist we already listen to
-            if track['artists'][0]['name'] == top_artist_name:
-                continue
-
-            recommendations.append({
-                "title": track["name"],
-                "artist": track["artists"][0]["name"],
-                "image_url": track["album"]["images"][0]["url"],
-                "external_url": track["external_urls"]["spotify"],
-                "reason": f"Because you listened to {seed_genre}"
-
-            })
-        
-        return recommendations
-    except Exception as e:
-        print(f"Recommendation Error")
+    if not top_track:
+        print("Cant get top track")
         return []
+    
+    title, artist = top_track
+    tags = get_track_tags(artist, title)
+
+    if not tags:
+        print("Cant get tags")
+        return []
+    
+    # Pick the first valid tag (for now)
+    selected_tag = tags[0]
+    print(f"Tag selected: {selected_tag}")
+
+    # Get songs with matching tags
+    candidate_songs = get_track_by_tags(selected_tag)
+    print(candidate_songs)
+
+    # List to store recommended songs
+    recommendations = []
+
+    for song in candidate_songs:
+        # Dont recommend the same song
+        if song["name"].lower() == title.lower():
+            continue
+
+        try:
+            # Search spotify for track
+            query = f"track:{song['name']} artist:{song['artist']}"
+            result = sp.search(q=query, type='track', limit=1)
+
+            items = result['tracks']['items']
+            if items:
+                track = items[0]
+                recommendations.append({
+                    "title": track["name"],
+                    "artist": track["artists"][0]["name"],
+                    "image_url": track["album"]["images"][0]["url"],
+                    "external_url": track["external_urls"]["spotify"],
+                    "reason": f"Because you listened to {selected_tag} music"
+
+                })
+        
+        except Exception as e:
+            continue
+        
+        # Recommend max of 10 recommendations
+        if len(recommendations) >= 10:
+            break
+    
+
+    return recommendations
     
 
 # Health check
