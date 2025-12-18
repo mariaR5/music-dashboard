@@ -503,36 +503,45 @@ def get_credits_recommendations(session: Session = Depends(get_session)):
 
         
         for name, id, role in relevant_people:
-            # Skip the artist themselves
-            if name.lower() in artist.lower(): continue
-
-
             print(f"Looking for hits by {name} : {role}")
 
             try:
-                # Browse recordings of the person
-                works = musicbrainzngs.browse_recordings(artist=id, limit=40)
-
+                # Browse recordings related to the person (fetches all works that the artist has worked on)
+                artist_data = musicbrainzngs.get_artist_by_id(id, includes=['recording-rels']) 
+                relations = artist_data['artist'].get('recording-relation-list', [])
+                
                 count = 0
-                for work in works['recording-list']:
-                    if count >=1: break # Only 1 songs per producer
+                for rel in relations:
+                    if count >= 2: break # Only 1 songs per producer
 
-                    rec_title = work['title']
+                    if rel.get('type') not in ['producer', 'arranger', 'composer', 'writer', 'lyricist']:
+                        continue
+                    
+                    rec_title = rel['recording']['title']
+                    
+                    # To ge the main artist of rec_title, we need to fetch it from recordings details
+                    # Its not 
+                    try:
+                        rec_id = rel['recording']['id']
+                        rec_details = musicbrainzngs.get_recording_by_id(rec_id, includes=['artist-credits'])
 
-                    # Some entries may not contain 'artist-credit'
-                    if 'artist-credit' in work:
-                        rec_artist = work['artist-credit'][0]['artist']['name']
-                    else:
+                        if 'artist-credit' in rec_details['recording']:
+                            rec_artist = rec_details['recording']['artist-credit'][0]['artist']['name']
+                        else:
+                            continue
+
+                    except:
                         continue
 
-                    # Skip duplicates
+                    # skip duplicates
                     if rec_title.lower() in seen_songs: continue
 
-                    print(f"Searching spotify for song: {rec_title} - {rec_artist}")
-
                     try:
+                        print(f"Searching spotify for {rec_title} - {rec_artist}")
+
                         query = f"track:{rec_title} artist:{rec_artist}"
                         result = sp.search(q=query, type='track', limit=1)
+
                         if result['tracks']['items']:
                             track = result['tracks']['items'][0]
 
