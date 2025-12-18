@@ -15,6 +15,7 @@ class _RecommendationPageState extends State<RecommendationPage> {
 
   List<dynamic> _flowRecs = [];
   List<dynamic> _lyricRecs = [];
+  List<dynamic> _creditRecs = [];
   bool _isLoading = true;
 
   @override
@@ -28,6 +29,7 @@ class _RecommendationPageState extends State<RecommendationPage> {
       final results = await Future.wait([
         http.get(Uri.parse("$baseUrl/recommend")),
         http.get(Uri.parse("$baseUrl/recommend/lyrics")),
+        http.get(Uri.parse("$baseUrl/recommend/credits")),
       ]);
 
       if (mounted) {
@@ -38,6 +40,9 @@ class _RecommendationPageState extends State<RecommendationPage> {
           }
           if (results[1].statusCode == 200) {
             _lyricRecs = jsonDecode(results[1].body);
+          }
+          if (results[2].statusCode == 200) {
+            _creditRecs = jsonDecode(results[2].body);
           }
           _isLoading = false;
         });
@@ -66,6 +71,7 @@ class _RecommendationPageState extends State<RecommendationPage> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            // Flow recommendation
             if (_flowRecs.isNotEmpty) ...[
               Text(
                 "Listen to similar vibe",
@@ -129,6 +135,8 @@ class _RecommendationPageState extends State<RecommendationPage> {
               ),
               const SizedBox(height: 20),
             ],
+
+            // Lyrical recommendations
             if (_lyricRecs.isNotEmpty) ...[
               Text(
                 "Listen to similar story",
@@ -142,6 +150,71 @@ class _RecommendationPageState extends State<RecommendationPage> {
                   itemCount: _lyricRecs.length,
                   itemBuilder: (context, index) {
                     final song = _lyricRecs[index];
+                    return GestureDetector(
+                      onTap: () {
+                        if (song["spotify_url"] != null) {
+                          _launchSpotify(song["spotify_url"]);
+                        } else {
+                          print("Cant launch spotify");
+                        }
+                      },
+                      child: Container(
+                        width: 140,
+                        margin: const EdgeInsets.only(right: 10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                song["image_url"],
+                                height: 140,
+                                width: 140,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            const SizedBox(height: 5),
+                            Text(
+                              song["title"],
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              song["artist"],
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+
+            // Credit Recommendations
+            if (_creditRecs.isNotEmpty) ...[
+              Text(
+                "Listen to similar vibe",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                height: 200,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _creditRecs.length,
+                  itemBuilder: (context, index) {
+                    final song = _creditRecs[index];
                     return GestureDetector(
                       onTap: () {
                         if (song["spotify_url"] != null) {
