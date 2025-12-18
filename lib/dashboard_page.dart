@@ -17,8 +17,6 @@ class _DashboardPageState extends State<DashboardPage> {
   int _totalPlays = 0;
   List<TopSong> _topSongs = [];
   List<TopArtist> _topArtists = [];
-  List<dynamic> _recommendations = [];
-  String _recMessage = "No recommendations";
 
   int _selectedMonth = 0; // 0: All time, 1: Jan, 2: Feb,.....
 
@@ -47,7 +45,6 @@ class _DashboardPageState extends State<DashboardPage> {
       final resArtists = await http.get(
         Uri.parse("$baseUrl/stats/top-artists$queryParams"),
       );
-      final resRecs = await http.get(Uri.parse("$baseUrl/recommend"));
 
       if (resTotal.statusCode == 200 &&
           resArtists.statusCode == 200 &&
@@ -60,16 +57,6 @@ class _DashboardPageState extends State<DashboardPage> {
 
           final List<dynamic> artistList = jsonDecode(resArtists.body);
           _topArtists = artistList.map((e) => TopArtist.fromJson(e)).toList();
-
-          if (resRecs.statusCode == 200) {
-            _recommendations = jsonDecode(resRecs.body);
-
-            if (_recommendations.isNotEmpty) {
-              _recMessage = _recommendations[0]["reason"];
-            } else {
-              _recMessage = "No recommendations";
-            }
-          }
 
           _isLoading = false;
         });
@@ -133,71 +120,6 @@ class _DashboardPageState extends State<DashboardPage> {
             //---Total Plays---
             _buildStatCard("Total Plays", "$_totalPlays", Colors.red),
             const SizedBox(height: 30),
-
-            //---Recommendations---
-            if (_recommendations.isNotEmpty) ...[
-              Text(
-                _recMessage,
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                height: 200,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _recommendations.length,
-                  itemBuilder: (context, index) {
-                    final song = _recommendations[index];
-                    return GestureDetector(
-                      onTap: () {
-                        if (song["spotify_url"] != null) {
-                          _lauchSpotify(song["spotify_url"]);
-                        } else {
-                          print("Cant launch spotify");
-                        }
-                      },
-                      child: Container(
-                        width: 140,
-                        margin: const EdgeInsets.only(right: 10),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
-                                song["image_url"],
-                                height: 140,
-                                width: 140,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                            const SizedBox(height: 5),
-                            Text(
-                              song["title"],
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              song["artist"],
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 20),
-            ],
 
             //---Top Songs---
             const Text(
