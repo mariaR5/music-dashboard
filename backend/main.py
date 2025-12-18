@@ -11,6 +11,7 @@ import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 import google.genai as genai
 import lyricsgenius
+import musicbrainzngs
 
 # Load secrets from .env
 load_dotenv()
@@ -409,6 +410,111 @@ def get_lyrical_recommendations(session: Session = Depends(get_session)):
         print(f"AI error: {e}")
         return []
 
+
+# Recommendation engine => Recommend songs by same producers/songwriters
+musicbrainzngs.set_useragent("UniversalScrobbler", "1.0", "http://localhost:8000")
+
+@app.get('/recommend/credits')
+def get_credits_recommendations(session: Session = Depends(get_session)):
+    # get top song
+    query = (
+        select(Scrobble.title, Scrobble.artist)
+        .group_by(Scrobble.title, Scrobble.artist)
+        .order_by(func.count(Scrobble.id).desc())
+        .limit(1)
+    )
+    top_track = session.exec(query).first()
+
+    if not top_track:
+        return {"message" : "Not enough data yet! Listen to more music."}
+    
+    title, artist = top_track
+    print(f"Analysing credits for {title} - {artist}")
+
+    recommendations = []
+    seen_songs = set()
+    seen_songs.add(title.lower())
+
+    try:
+        # Get metadata of top track from Musicbrainz
+        results = musicbrainzngs.search_recordings(query=title, artist=artist, limit=1)
+
+        if not results["recording-list"]:
+            return []
+        
+        # Get the id of one and only element in the list
+        recording = results["recording-list"][0]
+        mbid = recording["id"] # MBID of top track
+        print(f"Found MBID: {mbid}")
+
+        # Get music data including artist relations (producer, composer, guitarist,...)
+        data = musicbrainzngs.get_recording_by_id(mbid, includes=['artist-rels'])
+        relations = data['recording'].get('artist-relation-list', [])
+
+        target_roles = ['producer', 'composer', 'arranger', 'writer']
+
+        # List to store producers and songwriters of top track
+        relevant_people = []
+
+        for rel in relations:
+            if rel.get('type') in target_roles:
+                person_name = rel['artist']['name']
+                person_id = rel['artist']['id']
+                role = rel.get('type')
+                relevant_people.append((person_name, person_id, role))
+        
+        for name, id, role in relevant_people:
+            print(f"Looking for hits by {name} : {role}")
+
+            try:
+                works = musicbrainzngs.browse_recordings(artist=id, limit=25)
+
+                count = 0
+                for work in works['recording-list']:
+                    if count >=2: break # Only 1 songs per producer
+                    rec_title = work['title']
+
+                    # Some entries may not contain 'artist-credit'
+                    if 'artist-credit' in work:
+                        rec_artist = work['artist-credit'][0]['artist']['name']
+                    else:
+                        continue
+
+
+                    # Skip original artists and duplicates
+                    if rec_artist.lower() == artist.lower(): continue
+                    if rec_title.lower() in seen_songs: continue
+
+                    print(f"Searching spotify for song: {rec_title} - {rec_artist}")
+
+                    try:
+                        query = f"track:{rec_title} artist:{rec_artist}"
+                        result = sp.search(q=query, type='track', limit=1)
+                        if result['tracks']['items']:
+                            track = result['tracks']['items'][0]
+
+                        recommendations.append({
+                        "title": track['name'],
+                        "artist": track['artists'][0]['name'],
+                        "image_url": track['album']['images'][0]["url"] if track['album']['images'] else "",
+                        "spotify_url": track['external_urls']['spotify'],
+                        "reason": f"Produced/Written by {person_name} ({role})",
+                        })
+                        seen_songs.add(rec_title.lower())
+                        count += 1
+
+                    except:
+                        pass
+            except Exception as e:
+                print(f"Skipping person {person_name}: {e}")
+                continue
+            
+            if len(recommendations) >= 10: break
+    
+    except Exception as e:
+        print(f"Musicbrainz error : {e}")
+        return []  
+    
 
 # Health check
 @app.get("/") # "/" sending request to root path
