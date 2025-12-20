@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class RecommendationPage extends StatefulWidget {
   const RecommendationPage({super.key});
@@ -11,11 +12,12 @@ class RecommendationPage extends StatefulWidget {
 }
 
 class _RecommendationPageState extends State<RecommendationPage> {
-  final String baseUrl = "http://10.140.70.78:8000";
+  final String baseUrl = dotenv.env['API_BASE_URL']!;
 
   List<dynamic> _flowRecs = [];
   List<dynamic> _lyricRecs = [];
   List<dynamic> _creditRecs = [];
+  List<dynamic> _artistRecs = [];
   bool _isLoading = true;
 
   @override
@@ -30,6 +32,7 @@ class _RecommendationPageState extends State<RecommendationPage> {
         http.get(Uri.parse("$baseUrl/recommend")),
         http.get(Uri.parse("$baseUrl/recommend/lyrics")),
         http.get(Uri.parse("$baseUrl/recommend/credits")),
+        http.get(Uri.parse("$baseUrl/recommend/artists")),
       ]);
 
       if (mounted) {
@@ -43,6 +46,9 @@ class _RecommendationPageState extends State<RecommendationPage> {
           }
           if (results[2].statusCode == 200) {
             _creditRecs = jsonDecode(results[2].body);
+          }
+          if (results[3].statusCode == 200) {
+            _artistRecs = jsonDecode(results[3].body);
           }
           _isLoading = false;
         });
@@ -204,7 +210,7 @@ class _RecommendationPageState extends State<RecommendationPage> {
             // Credit Recommendations
             if (_creditRecs.isNotEmpty) ...[
               Text(
-                "Listen to similar vibe",
+                "Listen to similar producers",
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
@@ -254,6 +260,58 @@ class _RecommendationPageState extends State<RecommendationPage> {
                               style: const TextStyle(
                                 fontSize: 12,
                                 color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+            // Artist Recommendations
+            if (_artistRecs.isNotEmpty) ...[
+              Text(
+                "Listen to similar artists",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                height: 200,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _artistRecs.length,
+                  itemBuilder: (context, index) {
+                    final song = _artistRecs[index];
+                    return GestureDetector(
+                      onTap: () {
+                        if (song["spotify_url"] != null) {
+                          _launchSpotify(song["spotify_url"]);
+                        } else {
+                          print("Cant launch spotify");
+                        }
+                      },
+                      child: Container(
+                        width: 140,
+                        margin: const EdgeInsets.only(right: 10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            CircleAvatar(
+                              radius: 70,
+                              backgroundImage: NetworkImage(
+                                song['artist_image'],
+                              ),
+                            ),
+                            const SizedBox(height: 5),
+                            Text(
+                              song["artist"],
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ],

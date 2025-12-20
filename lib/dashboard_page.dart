@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:scrobbler/stats_model.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -12,7 +13,7 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  final String baseUrl = "http://10.140.70.78:8000";
+  final String baseUrl = dotenv.env['API_BASE_URL']!;
 
   int _totalPlays = 0;
   List<TopSong> _topSongs = [];

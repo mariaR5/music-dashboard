@@ -8,6 +8,8 @@ from sqlmodel import SQLModel, Session, create_engine, Field, select
 from sqlalchemy import func, extract
 from typing import Optional, List
 from datetime import datetime, timezone
+from collections import Counter
+
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 import google.genai as genai
@@ -626,7 +628,103 @@ def get_ai_credit_recs(title, artist):
         return []
 
 
+@app.get('/recommend/artists')
+def get_artist_recommendations(session: Session = Depends(get_session)):
+    # Get all genres from database (genres stored in string format eg "pop, rock")
+    genre_history = session.exec(select(Scrobble.genres)).all()
+
+    if not genre_history:
+        return [{'title': 'No data', 'artist': '-', 'reason': 'No history'}]
     
+    # Get each genre count
+    genre_count = Counter() # To store count of each genre eg {'rock': 2, 'pop': 4}
+    for genre_str in genre_history:
+        if genre_str:
+            # Split the string to get list of indivitual genres
+            genres = [g.strip().lower() for g in genre_str.split(',')]
+            genre_count.update(genres)
+
+    # Get top 5 genres
+    top_genres_tuples = genre_count.most_common(5) # Returns list of tuples eg: [('rock', 2), ('pop', 4)]
+    top_genres = [g[0] for g in top_genres_tuples] # List of top genres
+
+    print(f"Top genres: {top_genres}")
+
+    if not top_genres:
+        return []
+    
+
+    # Build artist blocklist (Already known artists)
+    query = select(Scrobble.artist).distinct()
+    known_artists = [a.lower() for a in session.exec(query).all()]
+
+    # Dictionary to store candidate artists {artist_id: artist_object}
+    candidates = {}
+
+    search_seeds = top_genres[:3]  # Take only top 3 genres
+
+    for genre in search_seeds:
+        try:
+            query = f"genre:{genre}"
+            results = sp.search(q=query, type='artist', limit=20)
+
+            for item in results['artists']['items']:
+                artist_name = item['name']
+
+                # Skip if known artist
+                if artist_name.lower() in known_artists:
+                    continue
+                
+                # Add to candidiate pool
+                candidates[item['id']] = item
+
+        except Exception as e:
+            print(f"Search error for {genre}: {e}")
+            continue
+
+    print(f"Analysing {len(candidates)} candidates")
+
+
+    # Score candidates (Intersection Logic)
+    scored_artists = []
+
+    user_genre_set = set(top_genres) # To perform intersection
+
+    for artist_id, artist_obj in candidates.items():
+        cand_genres = set(artist_obj['genres'])
+
+        # Calculate intersection
+        overlap = cand_genres.intersection(user_genre_set)
+        score = len(overlap)
+
+        if score > 0:
+            scored_artists.append({
+                "artist": artist_obj,
+                "score": score,
+                "overlap": list(overlap)
+            })
+
+
+    # Sort by score (descending)
+    scored_artists.sort(key=lambda x: x['score'], reverse=True)
+
+    recommendations = []
+
+    # Take top 10 winners
+    for item in scored_artists[:10]:
+        artist = item['artist']
+        score = item['score']
+        shared = ', '.join(item['overlap'])
+
+        recommendations.append({
+            'artist': artist['name'],
+            'artist_image': artist['images'][0]['url'] if artist['images'] else "",
+            'spotify_url': artist['external_urls']['spotify'],
+            'reason': f"More artists of {shared}"
+
+        })
+    
+    return recommendations
 
 # Health check
 @app.get("/") # "/" sending request to root path

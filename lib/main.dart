@@ -5,6 +5,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_notification_listener/flutter_notification_listener.dart';
 import 'package:scrobbler/dashboard_page.dart';
 import 'package:scrobbler/recommendation_page.dart';
@@ -56,7 +57,7 @@ void _callback(NotificationEvent evt) async {
     print("Scrobble confirmed: $_lastTitle");
 
     // Send data to python backend
-    const String backendURL = "http://10.140.70.78:8000/scrobble";
+    final String backendURL = dotenv.env['API_BASE_URL']!;
 
     try {
       final response = await http.post(
@@ -76,7 +77,10 @@ void _callback(NotificationEvent evt) async {
   });
 }
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
+
   runApp(const MaterialApp(home: ScrobblerHome()));
 }
 
