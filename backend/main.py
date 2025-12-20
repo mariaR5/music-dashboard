@@ -729,113 +729,118 @@ def get_artist_recommendations(session: Session = Depends(get_session)):
 
 @app.get('/recommend/samples')
 def get_sample_recommendations(session: Session = Depends(get_session)):
-    # get top artist
+    # get top 20 songs
     query = (
         select(Scrobble.title, Scrobble.artist)
         .group_by(Scrobble.title, Scrobble.artist)
         .order_by(func.count(Scrobble.id).desc())
-        .limit(1)
+        .limit(20)
     )
-    top_track = session.exec(query).first()
+    top_tracks = session.exec(query).all()
 
-    if not top_track:
+    if not top_tracks:
         return {"message" : "Not enough data yet! Listen to more music."}
-    
-    title, artist = top_track
-    print(f"Hunting samples for {title} by {artist}")
 
 
     recommendations = []
-    seen_songs = {title.lower()}
+    seen_songs = {t.title.lower() for t in top_tracks}
 
-    try:
-        query = f'{title} {artist}'
-        result = genius.search_songs(query) # Get metadata of the song
+    for song_entry in top_tracks:
+        if len(recommendations) >=5: break
 
-        if not result or 'hits' not in result or not result['hits']:
-            print("Song not foung on Genius")
-            return []
-        
-        # Get ID of the first search match
-        top_hit = result['hits'][0]['result']
-        genius_id = top_hit['id']
+        title, artist = song_entry
+        print(f'Checking samples for {title} - {artist}')
 
-        print(f'Foung genius id: {genius_id}')
+        try:
+            query = f'{title} {artist}'
+            result = genius.search_songs(query) # Get metadata of the song
 
-        # Fetch full song data of the speicific id
-        song_data = genius.song(genius_id)['song']
+            if not result or 'hits' not in result or not result['hits']:
+                continue
+            
+            # Get ID of the first search match
+            top_hit = result['hits'][0]['result']
+            genius_id = top_hit['id']
 
-        # Get song realtionships (returns dict of samples, sampled_in, remixes and covers)
-        relations = song_data.get('song_relationships', [])
-        target_types = ['samples', 'sampled_by']
+            print(f'Foung genius id: {genius_id}')
 
-        candidates = []
+            # Fetch full song data of the speicific id
+            song_data = genius.song(genius_id)['song']
 
-        for relation in relations:
-            rel_type = relation['type']
+            # Get song realtionships (returns dict of samples, sampled_in, remixes and covers)
+            relations = song_data.get('song_relationships', [])
+            target_types = ['samples', 'sampled_by']
 
-            if rel_type in target_types:
-                for rel_song in relation['songs']:
-                    # Extract artist name
-                    rel_artist = rel_song.get('artist_names')
-                    if not rel_artist and 'primary_artist' in rel_song:
-                        rel_artist = rel_song['primary_artist']['name']
+            candidates = []
 
-                    candidates.append({
-                        'title': rel_song['title'],
-                        'artist': rel_artist,
-                        'type': rel_type
-                    })
+            for relation in relations:
+                rel_type = relation['type']
 
-        if not candidates:
-            print("No samples found")
-            return []
+                if rel_type in target_types:
+                    for rel_song in relation['songs']:
+                        # Extract artist name
+                        rel_artist = rel_song.get('artist_names')
+                        if not rel_artist and 'primary_artist' in rel_song:
+                            rel_artist = rel_song['primary_artist']['name']
 
-        random.shuffle(candidates)
-        print(f"Found {len(candidates)} sample connectiions")
+                        candidates.append({
+                            'title': rel_song['title'],
+                            'artist': rel_artist,
+                            'type': rel_type
+                        })
 
-
-        for item in candidates:
-            if len(recommendations) >=5: break
-
-            cand_title = item['title']
-            cand_artist = item['artist']
-
-            if cand_title.lower() in seen_songs: continue
-            if cand_artist.lower() in artist.lower(): continue # Skips remixes by same artist
-
-            try:
-                query = f"track:{cand_title} artist:{cand_artist}"
-                result = sp.search(q=query, type='track', limit=1)
-
-                if result['tracks']['items']:
-                    track = result['tracks']['items'][0]
-
-                    reason = ''
-                    if item['type'] == 'samples':
-                        reason = f'Sampled by {title}' # Ancestor
-                    else:
-                        reason = f'Samples {title}' # Descendant
-
-
-                    recommendations.append({
-                        "title": track['name'],
-                        "artist": track['artists'][0]['name'],
-                        "image_url": track['album']['images'][0]["url"] if track['album']['images'] else "",
-                        "spotify_url": track['external_urls']['spotify'],
-                        "reason": reason,
-                    })
-                    seen_songs.add(cand_title.lower())
-                    print(f"Match found: {cand_title} - {cand_artist}")
-
-            except Exception as e:
+            if not candidates:
                 continue
 
-        return recommendations
-    
-    except Exception as e:
-        print(f"Genius Error: {e}")
-        return []  
+            random.shuffle(candidates)
+            print(f"Found {len(candidates)} sample connectiions")
+
+
+            for item in candidates:
+                if len(recommendations) >= 5: break
+
+                cand_title = item['title']
+                cand_artist = item['artist']
+
+                print(f"Processing {cand_title} - {cand_artist}")
+
+                if cand_title.lower() in seen_songs: continue
+                if cand_artist.lower() in artist.lower(): continue # Skips remixes by same artist
+
+                try:
+                    query = f"track:{cand_title} artist:{cand_artist}"
+                    result = sp.search(q=query, type='track', limit=1)
+
+                    if result['tracks']['items']:
+                        track = result['tracks']['items'][0]
+                    else:
+                        print("Not found on spotify")
+
+                        reason = ''
+                        if item['type'] == 'samples':
+                            reason = f'Sampled by {title}' # Ancestor
+                        else:
+                            reason = f'Samples {title}' # Descendant
+
+
+                        recommendations.append({
+                            "title": track['name'],
+                            "artist": track['artists'][0]['name'],
+                            "image_url": track['album']['images'][0]["url"] if track['album']['images'] else "",
+                            "spotify_url": track['external_urls']['spotify'],
+                            "reason": reason,
+                        })
+                        seen_songs.add(cand_title.lower())
+                        print(f"Match found: {cand_title} - {cand_artist}")
+
+                except:
+                    continue
+        
+        except Exception as e:
+            print(f"Genius Error: {e}")
+            return [] 
+
+    return recommendations 
 
 
 # Health check
