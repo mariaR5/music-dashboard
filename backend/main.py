@@ -1,5 +1,6 @@
 import os
 import json
+import time
 import random
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends
@@ -412,8 +413,6 @@ def get_lyrical_recommendations(session: Session = Depends(get_session)):
 
 
 # Recommendation engine => Recommend songs by same producers/songwriters
-musicbrainzngs.set_useragent("UniversalScrobbler", "1.0", "http://localhost:8000")
-
 @app.get('/recommend/credits')
 def get_credits_recommendations(session: Session = Depends(get_session)):
     # get top song
@@ -429,100 +428,204 @@ def get_credits_recommendations(session: Session = Depends(get_session)):
         return {"message" : "Not enough data yet! Listen to more music."}
     
     title, artist = top_track
-    print(f"Fetching top writer of {title} - {artist}")
+    print(f"Credits search for: {title} - {artist}")
 
     recommendations = []
     seen_songs = {title.lower()}
-    top_writer = None
+    target_person = None
+
+    musicbrainzngs.set_useragent("UniversalScrobbler", "1.0", "http://localhost:8000")
 
     try:
+        #----Search for key person---
+
+        # Case 1: Search recording for producer
         rec_search = musicbrainzngs.search_recordings(query=title, artist=artist, limit=3)
 
         if rec_search.get('recording-list'):
             for rec_match in rec_search['recording-list']:
                 mbid = rec_match["id"] # MBID of top track
                 try:
-                    # Get music data including work relations (composer, songwriter,...)
-                    data = musicbrainzngs.get_recording_by_id(mbid, includes=['work-rels', 'work-level-rels'])
+                    time.sleep(1.1)
+
+                    # Get music data including artist and work relations
+                    data = musicbrainzngs.get_recording_by_id(mbid, includes=['artist-rels', 'releases', 'work-rels', 'work-level-rels'])
                     recording = data['recording']
 
-                    #
+                    # Check producers
+                    for rel in recording.get('artist-relation-list', []):
+                        if rel.get('type') == 'producer':
+                            target_person = (rel['artist']['name'], rel['artist']['id'], "Producer")
+                            break
+                        if target_person: break
+
+
+                    # Check writers
                     if 'work-relation-list' in recording:
                         for work_rel in recording['work-relation-list']:
                             if 'work' in work_rel and 'artist-relation-list' in work_rel['work']:
                                 for rel in work_rel['work']['artist-relation-list']:
-                                    if rel.get('type') == 'composer':
-                                        top_writer = (rel['artist']['name'], rel['artist']['id'], 'Composer')
+                                    if rel.get('type') in ['composer', 'writer']:
+                                        target_person = (rel['artist']['name'], rel['artist']['id'], 'Writer')
                                         break
-                                    if rel.get('type') == 'writer' and not top_writer:
-                                        top_writer = (rel['artist']['name'], rel['artist']['id'], 'Writer')
-                                        break
-                                    if rel.get('type') == 'lyricist' and not top_writer:
-                                        top_writer = (rel['artist']['name'], rel['artist']['id'], 'Lyricist')
-                                        break
+                                    
+                            if target_person: break
+                    if target_person: break
 
-                            if top_writer: break
-                    if top_writer: break
-                except: continue
+                except Exception as e:
+                    print(f"Error checking candidates: {e}")
+                    continue
         
-        if not top_writer:
-            print("No writer found in MusicBrainz")
-            return []
+        if not target_person:
+            # Fallback to AI if Musicbrainz fail
+            print("No writer/produer found in MusicBrainz. Switching to AI")
+            return get_ai_credit_recs(title, artist)
 
-        writer_name, writer_id, writer_role = top_writer
-        print(f"Main writer found: {writer_name} ({writer_role})")
+        p_name, p_id, p_role = target_person
+        print(f"Target person: {p_name} ({p_role})")
+
+        #---Find other songs by key person---
+        time.sleep(1.1)
+        includes = ['recording-rels'] if "Producer" in p_role else ['work-rels']
+        artist_data = musicbrainzngs.get_artist_by_id(p_id, includes=includes)
+        artist_obj = artist_data['artist']
         
-        # Find other songs produced by top producer
-        # Browse works of the top writer
-        works_result = musicbrainzngs.browse_works(artist=writer_id, limit=30)
-        work_list = works_result.get('work-list', [])
+        # List to store song candidates
+        candidates = []
 
-        random.shuffle(work_list)
+        if "Producer" in p_role:
+            for rel in artist_obj.get('recording-relation-list', []):
+                if rel.get('type') in ['producer', 'remixer']:
+                    candidates.append((rel['recording']['title'], rel['recording']['id'], 'recording'))
 
-        for work in work_list:
-            work_title = work['title']
+        else:
+            for rel in artist_obj.get('work-relation-list', []):
+                if rel.get('type') in ['composer', 'writer']:
+                    candidates.append((rel['work']['title'], rel['work']['id'], 'work')) 
+
+        # Shuffle and take a smaller slice
+        random.shuffle(candidates)
+        candidates = candidates[:15]
+
+
+        for title, id, type in candidates:
+            if len(recommendations) >= 10: break
+            if title.lower() in seen_songs: continue
+
+            target_performer = None
+
+            try:
+                time.sleep(1.1)
+
+                if type == 'recording':
+                    rec_data = musicbrainzngs.get_recording_by_id(id, includes=['artist-credits'])
+                    if 'artist-credit' in rec_data['recording']:
+                        target_performer = rec_data['recording']['artist-credit'][0]['artist']['name']
+                elif type == 'work':
+                    work_data = musicbrainzngs.get_work_by_id(id, includes=['recording-rels'])
+                    if 'recording-relation-list' in work_data['work']:
+                        for rel in work_data['work']['recording-relation-list']:
+                            if 'artist-credit' in rel['recording']:
+                                target_performer = rec_data['recording']['artist-credit'][0]['artist']['name']
+                                break
             
-            if work_title.lower() in seen_songs:
+            except Exception as e:
+                print(f"API rate limit hit/error: {e}")
                 continue
+
+            if not target_performer: continue
             
             try:
                 # Search spotify for artist of the song
-                query = f"track:{work_title}"
-                result = sp.search(q=query, type='track', limit=5)
+                query = f"track:{title} artist:{target_performer}"
+                result = sp.search(q=query, type='track', limit=1)
 
-                track = None
+                if result['tracks']['items']:
+                    track = result['tracks']['items'][0]
 
-                for item in result['tracks']['items']:
-                    work_artist = item['artists'][0]['name']
-
-                    if work_artist.lower() == artist.lower(): continue
-                    if work_artist.lower() == writer_name.lower(): continue
-
-                    track = item
-                    break
-
-                if track:
                     recommendations.append({
                     "title": track['name'],
                     "artist": track['artists'][0]['name'],
                     "image_url": track['album']['images'][0]["url"] if track['album']['images'] else "",
                     "spotify_url": track['external_urls']['spotify'],
-                    "reason": f"Written by {writer_name})",
+                    "reason": f"{p_role}: {p_name}",
                     })
-                    seen_songs.add(work_title.lower())
-                    print(f"Match: {track['name']} - {track['artists'][0]['name']}")
+                    seen_songs.add(title.lower())
+                    print(f"Recommended: {track['name']}")
 
             except Exception as e:
-                print(f"Spotify lookup failed for {work_title}: {e}")
+                print(f"Spotify lookup failed for {title}: {e}")
                 pass
-            
-            if len(recommendations) >= 10: break
+        
+        if not recommendations:
+            print("No valid credits found")
+            return get_ai_credit_recs(title, artist)
         
         return recommendations
 
     except Exception as e:
         print(f"MusicBrainz error : {e}")
         return []  
+    
+def get_ai_credit_recs(title, artist):
+    
+    prompt = f"""
+    Who is the main producer or songwriter of "{title}" by "{artist}"?
+    Identify the most famous one.
+    Then, recommend 10 other songs produced or written by that SPECIFIC person.
+    
+    Return JSON:
+    [
+        {{"title": "Song", "artist": "Artist", "reason": "Produced by [Name]"}}
+    ]
+    """
+
+    try:
+
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt
+        )
+
+        # Reponse may contain ```json .... ```
+        text_response = response.text.replace("```json", "").replace("```", "").strip()
+        ai_recommendations = json.loads(text_response)
+        print(ai_recommendations)
+
+        # List to store final recommendations
+        recommendations = []
+
+        for song in ai_recommendations:
+            # Skip if it recommends same song
+            if song['title'].lower() == title.lower():
+                continue
+
+            try:
+                query = f"track:{song['title']} artist:{song['artist']}"
+                result = sp.search(q=query, type='track', limit=1)
+
+                items = result['tracks']['items']
+                if items:
+                    track = items[0]
+                    recommendations.append({
+                        "title": track['name'],
+                        "artist": track['artists'][0]['name'],
+                        "image_url": track['album']['images'][0]["url"] if track['album']['images'] else "",
+                        "spotify_url": track['external_urls']['spotify'],
+                        "reason": song['reason']
+                    })
+            
+            except Exception as e:
+                print(f"Error in {song['title']} : {e}")
+                continue
+        
+        return recommendations
+
+    except Exception as e:
+        print(f"AI error: {e}")
+        return []
+
+
     
 
 # Health check
