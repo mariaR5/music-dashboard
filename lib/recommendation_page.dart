@@ -18,6 +18,7 @@ class _RecommendationPageState extends State<RecommendationPage> {
   List<dynamic> _lyricRecs = [];
   List<dynamic> _creditRecs = [];
   List<dynamic> _artistRecs = [];
+  List<dynamic> _sampleRecs = [];
   bool _isLoading = true;
 
   @override
@@ -29,10 +30,11 @@ class _RecommendationPageState extends State<RecommendationPage> {
   Future<void> fetchRecommendations() async {
     try {
       final results = await Future.wait([
-        http.get(Uri.parse("$baseUrl/recommend")),
+        http.get(Uri.parse("$baseUrl/recommend/vibes")),
         http.get(Uri.parse("$baseUrl/recommend/lyrics")),
         http.get(Uri.parse("$baseUrl/recommend/credits")),
         http.get(Uri.parse("$baseUrl/recommend/artists")),
+        http.get(Uri.parse("$baseUrl/recommend/samples")),
       ]);
 
       if (mounted) {
@@ -49,6 +51,9 @@ class _RecommendationPageState extends State<RecommendationPage> {
           }
           if (results[3].statusCode == 200) {
             _artistRecs = jsonDecode(results[3].body);
+          }
+          if (results[4].statusCode == 200) {
+            _sampleRecs = jsonDecode(results[4].body);
           }
           _isLoading = false;
         });
@@ -271,6 +276,7 @@ class _RecommendationPageState extends State<RecommendationPage> {
               ),
               const SizedBox(height: 20),
             ],
+
             // Artist Recommendations
             if (_artistRecs.isNotEmpty) ...[
               Text(
@@ -312,6 +318,80 @@ class _RecommendationPageState extends State<RecommendationPage> {
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+
+            // Sample recommendation
+            if (_sampleRecs.isNotEmpty) ...[
+              Text(
+                "Listen to samples",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                height: 200,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _sampleRecs.length,
+                  itemBuilder: (context, index) {
+                    final song = _sampleRecs[index];
+                    return GestureDetector(
+                      onTap: () {
+                        if (song["spotify_url"] != null) {
+                          _launchSpotify(song["spotify_url"]);
+                        } else {
+                          print("Cant launch spotify");
+                        }
+                      },
+                      child: Container(
+                        width: 140,
+                        margin: const EdgeInsets.only(right: 10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                song["image_url"],
+                                height: 140,
+                                width: 140,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            const SizedBox(height: 5),
+                            Text(
+                              song["title"],
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              song["artist"],
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            Text(
+                              song["reason"],
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 8,
+                                color: Colors.grey,
                               ),
                             ),
                           ],

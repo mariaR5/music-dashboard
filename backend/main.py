@@ -734,7 +734,7 @@ def get_sample_recommendations(session: Session = Depends(get_session)):
         select(Scrobble.title, Scrobble.artist)
         .group_by(Scrobble.title, Scrobble.artist)
         .order_by(func.count(Scrobble.id).desc())
-        .limit(20)
+        .limit(30)
     )
     top_tracks = session.exec(query).all()
 
@@ -762,7 +762,7 @@ def get_sample_recommendations(session: Session = Depends(get_session)):
             top_hit = result['hits'][0]['result']
             genius_id = top_hit['id']
 
-            print(f'Foung genius id: {genius_id}')
+            print(f'Found genius id: {genius_id}')
 
             # Fetch full song data of the speicific id
             song_data = genius.song(genius_id)['song']
