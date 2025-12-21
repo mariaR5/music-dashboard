@@ -16,6 +16,7 @@ class _DashboardPageState extends State<DashboardPage> {
   final String baseUrl = dotenv.env['API_BASE_URL']!;
 
   int _totalPlays = 0;
+  int _totalMinutes = 0;
   List<TopSong> _topSongs = [];
   List<TopArtist> _topArtists = [];
 
@@ -52,6 +53,7 @@ class _DashboardPageState extends State<DashboardPage> {
           resSongs.statusCode == 200) {
         setState(() {
           _totalPlays = jsonDecode(resTotal.body)["total_plays"];
+          _totalMinutes = jsonDecode(resTotal.body)["total_minutes"];
 
           final List<dynamic> songList = jsonDecode(resSongs.body);
           _topSongs = songList.map((e) => TopSong.fromJson(e)).toList();
@@ -120,6 +122,10 @@ class _DashboardPageState extends State<DashboardPage> {
           children: [
             //---Total Plays---
             _buildStatCard("Total Plays", "$_totalPlays", Colors.red),
+            const SizedBox(height: 10),
+
+            //---Total Minutes
+            _buildStatCard('Minutes Listened', "$_totalMinutes", Colors.green),
             const SizedBox(height: 30),
 
             //---Top Songs---

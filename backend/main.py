@@ -50,11 +50,9 @@ class Scrobble(SQLModel, table=True):
 
     # Spotify data
     spotify_id: Optional[str] = None
+    duration_ms: int = Field(default=0)
     image_url: Optional[str] = None
     artist_image: Optional[str] = None
-    tempo: Optional[float] = None
-    valence: Optional[float] = None
-    energy: Optional[float] = None
     genres: Optional[str] = None
 
 # Documentation : https://developer.spotify.com/documentation/web-api
@@ -76,7 +74,6 @@ def enrich_data(title: str, artist: str):
         track = items[0] # Gets the first and only dict in items list
         t_id = track["id"] # Stores spotify id of the track
 
-        # features = sp.audio_features([t_id])[0] # Deprecated
 
         artist_id = track["artists"][0]["id"]
         artist_info = sp.artist(artist_id)
@@ -85,6 +82,7 @@ def enrich_data(title: str, artist: str):
 
         return {
             "spotify_id": t_id,
+            "duration_ms": track['duration_ms'],
             "image_url": track["album"]["images"][0]["url"],
             "artist_image": artist_image,
             "tempo": None, # features["tempo"],
@@ -216,16 +214,29 @@ def get_top_artists(
 
 # Get total plays
 @app.get("/stats/total")
-def get_total_plays(
+def get_total_stats(
     month: Optional[int] = None,
     year: Optional[int] = None,
     session: Session = Depends(get_session)
     ):
+
+    # Total plays
     query = select(func.count(Scrobble.id))
     query = apply_date_filter(query, month, year)
+    total_plays = session.exec(query).one()
 
-    result = session.exec(query).one()
-    return {"total_plays": result}
+    # Total minutes
+    query = select(func.sum(Scrobble.duration_ms))
+    query = apply_date_filter(query, month, year)
+    total_ms = session.exec(query).one()
+    if total_ms is None:
+        total_ms = 0
+
+    total_minutes = int(total_ms / 60000)
+    return {
+        "total_plays": total_plays,
+        "total_minutes": total_minutes,
+    }
 
 
 # Recommendation engine => Recommend songs with the same flow and vibe as one of the top 5 songs
