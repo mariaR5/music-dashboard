@@ -85,7 +85,7 @@ class _RecommendationPageState extends State<RecommendationPage> {
             // Flow recommendation
             if (_flowRecs.isNotEmpty) ...[
               Text(
-                "Listen to similar vibe",
+                _flowRecs[0]['reason'],
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
@@ -150,7 +150,7 @@ class _RecommendationPageState extends State<RecommendationPage> {
             // Lyrical recommendations
             if (_lyricRecs.isNotEmpty) ...[
               Text(
-                "Listen to similar story",
+                _lyricRecs[0]['reason'],
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
@@ -215,7 +215,7 @@ class _RecommendationPageState extends State<RecommendationPage> {
             // Credit Recommendations
             if (_creditRecs.isNotEmpty) ...[
               Text(
-                "Listen to similar producers",
+                _creditRecs[0]['reason'],
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
@@ -280,7 +280,7 @@ class _RecommendationPageState extends State<RecommendationPage> {
             // Artist Recommendations
             if (_artistRecs.isNotEmpty) ...[
               Text(
-                "Listen to similar artists",
+                _artistRecs[0]['reason'],
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
@@ -333,7 +333,7 @@ class _RecommendationPageState extends State<RecommendationPage> {
             // Sample recommendation
             if (_sampleRecs.isNotEmpty) ...[
               Text(
-                "Listen to samples",
+                _sampleRecs[0]['reason'],
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
