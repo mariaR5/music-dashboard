@@ -228,26 +228,34 @@ def get_total_plays(
     return {"total_plays": result}
 
 
-# Recommendation engine => Recommend songs with the same flow and vibe as the top song
-# Integrates Gemini API
+# Recommendation engine => Recommend songs with the same flow and vibe as one of the top 5 songs
 
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 @app.get("/recommend/vibes")
 def get_vibe_recommendations(session: Session = Depends(get_session)):
+    # Create a user history blocklist (To prevent recommending songs user has already listened to)
+    history_query = select(Scrobble.title, Scrobble.artist).distinct()
+    history_rows = session.exec(history_query).all()
+
+    # Create a set of tuples of history
+    known_songs = {(row.title.lower(), row.artist.lower()) for row in history_rows}
+
     # get top artist
     query = (
         select(Scrobble.title, Scrobble.artist)
         .group_by(Scrobble.title, Scrobble.artist)
         .order_by(func.count(Scrobble.id).desc())
-        .limit(1)
+        .limit(5)
     )
-    top_track = session.exec(query).first()
+    top_tracks = session.exec(query).all()
 
-    if not top_track:
+    if not top_tracks:
         return {"message" : "Not enough data yet! Listen to more music."}
     
-    title, artist = top_track
+    # Choose a random song from top 5 songs
+    seed_track = random.choice(top_tracks)
+    title, artist = seed_track
     print(f"Analysing vibe for {title} by {artist}")
 
     # Construct the prompt to get msuci with the same vibe and flow
@@ -284,6 +292,11 @@ def get_vibe_recommendations(session: Session = Depends(get_session)):
             if song['title'].lower() == title.lower():
                 continue
 
+            # Prevent recommending song user alrady knows
+            if (song['title'], song['artist']) in known_songs:
+                print(f'User already knows {song['title']}')
+                continue
+
             try:
                 query = f"track:{song['title']} artist:{song['artist']}"
                 result = sp.search(q=query, type='track', limit=1)
@@ -309,28 +322,36 @@ def get_vibe_recommendations(session: Session = Depends(get_session)):
         print(f"AI error: {e}")
         return []
     
-# Recommendation engine => Recommend songs with lyrical similarity as the top song
+# Recommendation engine => Recommend songs with lyrical similarity as one of the top 5 songs
+
 genius = lyricsgenius.Genius(os.getenv("GENIUS_ACCESS_TOKEN"), timeout=15, retries=3)
 genius.remove_section_headers = True # Remove headers ([Chorus] [Verse])
 genius.verbose = False # Turn off status messages
 
 @app.get("/recommend/lyrics")
 def get_lyrical_recommendations(session: Session = Depends(get_session)):
-    print("Started lyrical analysis engine")
+     # Create a user history blocklist (To prevent recommending songs user has already listened to)
+    history_query = select(Scrobble.title, Scrobble.artist).distinct()
+    history_rows = session.exec(history_query).all()
 
-    # get top song
+    # Create a set of tuples of history
+    known_songs = {(row.title.lower(), row.artist.lower()) for row in history_rows}
+
+    # get top 5 songs
     query = (
         select(Scrobble.title, Scrobble.artist)
         .group_by(Scrobble.title, Scrobble.artist)
         .order_by(func.count(Scrobble.id).desc())
-        .limit(1)
+        .limit(5)
     )
-    top_track = session.exec(query).first()
+    top_tracks = session.exec(query).all()
 
-    if not top_track:
+    if not top_tracks:
         return {"message" : "Not enough data yet! Listen to more music."}
     
-    title, artist = top_track
+    # Choose a random song from top 5 songs
+    seed_track = random.choice(top_tracks)
+    title, artist = seed_track
     print(f"Analysing lyrics for {title} - {artist}")
 
     # Fetch lyrics from Genius
@@ -388,6 +409,11 @@ def get_lyrical_recommendations(session: Session = Depends(get_session)):
             # Skip if it recommends same song
             if song['title'].lower() == title.lower():
                 continue
+                
+            # Prevent recommending song user alrady knows
+            if (song['title'], song['artist']) in known_songs:
+                print(f'User already knows {song['title']}')
+                continue
 
             try:
                 query = f"track:{song['title']} artist:{song['artist']}"
@@ -418,11 +444,12 @@ def get_lyrical_recommendations(session: Session = Depends(get_session)):
 # Recommendation engine => Recommend songs by same producers/songwriters
 @app.get('/recommend/credits')
 def get_credits_recommendations(session: Session = Depends(get_session)):
+
     # Create a user history blocklist (To prevent recommending songs user has already listened to)
     history_query = select(Scrobble.title, Scrobble.artist).distinct()
     history_rows = session.exec(history_query).all()
 
-    # Create a set of tuples
+    # Create a set of tuples of history
     known_songs = {(row.title.lower(), row.artist.lower()) for row in history_rows}
     
     # get top 5 songs
@@ -444,6 +471,7 @@ def get_credits_recommendations(session: Session = Depends(get_session)):
     recommendations = []
     musicbrainzngs.set_useragent("UniversalScrobbler", "1.0", "http://localhost:8000")
 
+    # Iterate through each track until we find a song with songwriter and other works
     for track in track_candidates:
         title, artist = track
         print(f"Credits search for: {title} - {artist}")
@@ -451,7 +479,7 @@ def get_credits_recommendations(session: Session = Depends(get_session)):
         try:
             time.sleep(1.1)
 
-            #----Search for key person----
+            # Search for recording on MB
             print(f"Searching for {title} - {artist}")
             result = musicbrainzngs.search_recordings(query=title, artist=artist, limit=5)
 
@@ -472,7 +500,8 @@ def get_credits_recommendations(session: Session = Depends(get_session)):
 
             songwriter = None
             work_id = None
-
+            
+            # Find the main songwriter
             if 'work-relation-list' in recording_details['recording']:
                 for work_rel in recording_details['recording']['work-relation-list']:
                     if 'work' in work_rel:
@@ -511,7 +540,7 @@ def get_credits_recommendations(session: Session = Depends(get_session)):
                 if work_title in seen_songs or work_title == title:
                     continue
                 
-                # Get recordings of the work to find the performer
+                # Get recordings of the work to find the artist of the song
                 try:
                     time.sleep(1.1)
 
@@ -525,6 +554,7 @@ def get_credits_recommendations(session: Session = Depends(get_session)):
                             # Get the first recordings id
                             recording_id = rec_relations[0].get('recording', {}).get('id')
 
+                            # Use the recording id to get the recording details with artists
                             if recording_id:
                                 rec_details = musicbrainzngs.get_recording_by_id(recording_id, includes=['artists'])
 
@@ -536,7 +566,7 @@ def get_credits_recommendations(session: Session = Depends(get_session)):
 
                                 print(f'Found match: {work_title} - {artist_name}')
 
-                                # History check 1
+                                # History check
                                 if (work_title.lower(), artist_name.lower()) in known_songs:
                                     print(f'User already knows {work_title}')
                                     continue
