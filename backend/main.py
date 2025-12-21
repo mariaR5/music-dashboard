@@ -418,29 +418,30 @@ def get_lyrical_recommendations(session: Session = Depends(get_session)):
 # Recommendation engine => Recommend songs by same producers/songwriters
 @app.get('/recommend/credits')
 def get_credits_recommendations(session: Session = Depends(get_session)):
-    # get top song
+    # get top 5 songs
     query = (
         select(Scrobble.title, Scrobble.artist)
         .group_by(Scrobble.title, Scrobble.artist)
         .order_by(func.count(Scrobble.id).desc())
-        .limit(1)
+        .limit(5)
     )
-    top_track = session.exec(query).first()
+    top_tracks = session.exec(query).all()
 
-    if not top_track:
+    if not top_tracks:
         return {"message" : "Not enough data yet! Listen to more music."}
     
-    title, artist = top_track
+    # Choose a random song from top 5 songs
+    seed_track = random.choice(top_tracks)
+    title, artist = seed_track
     print(f"Credits search for: {title} - {artist}")
 
     recommendations = []
     seen_songs = {title.lower()}
-    target_person = None
 
     musicbrainzngs.set_useragent("UniversalScrobbler", "1.0", "http://localhost:8000")
 
     try:
-        #----Search for key person---
+        #----Search for key person----
         print(f"Searching for {title} - {artist}")
         result = musicbrainzngs.search_recordings(query=title, artist=artist, limit=5)
 
@@ -551,7 +552,7 @@ def get_credits_recommendations(session: Session = Depends(get_session)):
                     "artist": track['artists'][0]['name'],
                     "image_url": track['album']['images'][0]["url"] if track['album']['images'] else "",
                     "spotify_url": track['external_urls']['spotify'],
-                    "reason": f"Because you listened to {title}",
+                    "reason": f"Also produced by {songwriter}",
                 })
         
         except Exception as e:
@@ -560,7 +561,7 @@ def get_credits_recommendations(session: Session = Depends(get_session)):
     
     return recommendations
 
-    
+   
 def get_ai_credit_recs(title, artist):
     
     prompt = f"""
@@ -619,7 +620,7 @@ def get_ai_credit_recs(title, artist):
         print(f"AI error: {e}")
         return []
 
-
+# Recommendation engine => Recommend new artists based on user's top genres
 @app.get('/recommend/artists')
 def get_artist_recommendations(session: Session = Depends(get_session)):
     # Get all genres from database (genres stored in string format eg "pop, rock")
@@ -718,6 +719,7 @@ def get_artist_recommendations(session: Session = Depends(get_session)):
     
     return recommendations
 
+# Recommendation engine => Recommend songs sampled from/sampled in users top songs
 @app.get('/recommend/samples')
 def get_sample_recommendations(session: Session = Depends(get_session)):
     # get top 20 songs
