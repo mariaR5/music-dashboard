@@ -55,6 +55,16 @@ class Scrobble(SQLModel, table=True):
     artist_image: Optional[str] = None
     genres: Optional[str] = None
 
+# Table to store AI results
+class AICache(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    seed_title: str
+    seed_artist: str
+    rec_type: str
+    data_json: str
+    created_at: datetime = Field(default_factory=lambda: datetime.utcnow())
+
+
 # Documentation : https://developer.spotify.com/documentation/web-api
 def enrich_data(title: str, artist: str):
     print(f"Searching Spotify for {title} - {artist}")
@@ -150,7 +160,7 @@ def read_history(session: Session = Depends(get_session)):
     ).all()
     return scrobbles
 
-#---------STATS-----------
+#====================STATS============================
 
 # Apply month, year filters to query
 def apply_date_filter(query, month: Optional[int], year: Optional[int]):
@@ -239,19 +249,14 @@ def get_total_stats(
     }
 
 
+#====================RECOMMENDATIONS============================
+
 # Recommendation engine => Recommend songs with the same flow and vibe as one of the top 5 songs
 
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 @app.get("/recommend/vibes")
 def get_vibe_recommendations(session: Session = Depends(get_session)):
-    # Create a user history blocklist (To prevent recommending songs user has already listened to)
-    history_query = select(Scrobble.title, Scrobble.artist).distinct()
-    history_rows = session.exec(history_query).all()
-
-    # Create a set of tuples of history
-    known_songs = {(row.title.lower(), row.artist.lower()) for row in history_rows}
-
     # get top artist
     query = (
         select(Scrobble.title, Scrobble.artist)
@@ -267,7 +272,39 @@ def get_vibe_recommendations(session: Session = Depends(get_session)):
     # Choose a random song from top 5 songs
     seed_track = random.choice(top_tracks)
     title, artist = seed_track
-    print(f"Analysing vibe for {title} by {artist}")
+
+    print(f'Checking cache for {title} - {artist}')
+
+    cache_query = select(AICache).where(
+        AICache.seed_title == title,
+        AICache.seed_artist == artist,
+        AICache.rec_type == 'vibes'
+    )   
+    cached_entry = session.exec(cache_query).first()
+
+    if cached_entry:
+        # Check if cache is more than 7 days old
+        now = datetime.utcnow()
+        age = now - cached_entry.created_at
+
+        if age.days < 7:
+            print(f'Found {title} in cache. Returning stored recs')
+            return json.loads(cached_entry.data_json)
+        else:
+            print(f'Cache expired. Regenerating')
+            session.delete(cached_entry)
+            session.commit()
+
+    print(f'Song details not found in cache')
+        
+    # Create a user history blocklist (To prevent recommending songs user has already listened to)
+    history_query = select(Scrobble.title, Scrobble.artist).distinct()
+    history_rows = session.exec(history_query).all()
+
+    # Create a set of tuples of history
+    known_songs = {(row.title.lower(), row.artist.lower()) for row in history_rows}
+
+    print(f"Analysing vibes of {title} by {artist}")
 
     # Construct the prompt to get msuci with the same vibe and flow
     prompt = f"""
@@ -326,6 +363,19 @@ def get_vibe_recommendations(session: Session = Depends(get_session)):
             except Exception as e:
                 print(f"Error in {song['title']} : {e}")
                 continue
+
+        # Save song and recommendations to cache
+        if recommendations:
+            print(f'Saving recommendations to cache')
+            new_cache = AICache(
+                seed_title=title,
+                seed_artist=artist,
+                rec_type='vibes',
+                data_json=json.dumps(recommendations)
+            )
+            session.add(new_cache)
+            session.commit()
+
         
         return recommendations
 
@@ -341,13 +391,6 @@ genius.verbose = False # Turn off status messages
 
 @app.get("/recommend/lyrics")
 def get_lyrical_recommendations(session: Session = Depends(get_session)):
-     # Create a user history blocklist (To prevent recommending songs user has already listened to)
-    history_query = select(Scrobble.title, Scrobble.artist).distinct()
-    history_rows = session.exec(history_query).all()
-
-    # Create a set of tuples of history
-    known_songs = {(row.title.lower(), row.artist.lower()) for row in history_rows}
-
     # get top 5 songs
     query = (
         select(Scrobble.title, Scrobble.artist)
@@ -363,7 +406,39 @@ def get_lyrical_recommendations(session: Session = Depends(get_session)):
     # Choose a random song from top 5 songs
     seed_track = random.choice(top_tracks)
     title, artist = seed_track
-    print(f"Analysing lyrics for {title} - {artist}")
+
+    print(f'Checking cache for {title} - {artist}')
+
+    cache_query = select(AICache).where(
+        AICache.seed_title == title,
+        AICache.seed_artist == artist,
+        AICache.rec_type == 'lyrics'
+    )   
+    cached_entry = session.exec(cache_query).first()
+
+    if cached_entry:
+        # Check if cache is more than 7 days old
+        now = datetime.utcnow()
+        age = now - cached_entry.created_at
+
+        if age.days < 7:
+            print(f'Found {title} in cache. Returning stored recs')
+            return json.loads(cached_entry.data_json)
+        else:
+            print(f'Cache expired. Regenerating')
+            session.delete(cached_entry)
+            session.commit()
+    
+    print(f'Song details not found in cache')
+        
+    # Create a user history blocklist (To prevent recommending songs user has already listened to)
+    history_query = select(Scrobble.title, Scrobble.artist).distinct()
+    history_rows = session.exec(history_query).all()
+
+    # Create a set of tuples of history
+    known_songs = {(row.title.lower(), row.artist.lower()) for row in history_rows}
+
+    print(f"Analysing lyrics of {title} by {artist}")
 
     # Fetch lyrics from Genius
     try:
@@ -444,6 +519,18 @@ def get_lyrical_recommendations(session: Session = Depends(get_session)):
             except Exception as e:
                 print(f"Error in {song['title']} : {e}")
                 continue
+
+        # Save song and recommendations to cache
+        if recommendations:
+            print(f'Saving recommendations to cache')
+            new_cache = AICache(
+                seed_title=title,
+                seed_artist=artist,
+                rec_type='lyrics',
+                data_json=json.dumps(recommendations)
+            )
+            session.add(new_cache)
+            session.commit()
         
         return recommendations
 
