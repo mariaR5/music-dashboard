@@ -25,14 +25,9 @@ void _callback(NotificationEvent evt) async {
     return;
   }
 
-  final allowedPackages = {
-    'com.spotify.music',
-    'com.google.android.apps.youtube.music',
-    'com.soundcloud.android',
-  };
+  bool isMediaNotification = _isMediaNotification(evt);
 
-  // If not music notification, ignore
-  if (evt.packageName == null || !allowedPackages.contains(evt.packageName)) {
+  if (!isMediaNotification) {
     return;
   }
 
@@ -61,7 +56,7 @@ void _callback(NotificationEvent evt) async {
 
     try {
       final response = await http.post(
-        Uri.parse(backendURL),
+        Uri.parse('$backendURL/scrobble'),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "title": _lastTitle,
@@ -75,6 +70,51 @@ void _callback(NotificationEvent evt) async {
       print("Failed to send backend: $e");
     }
   });
+}
+
+bool _isMediaNotification(NotificationEvent evt) {
+  final allowedPackages = {
+    'com.spotify.music',
+    'com.google.android.apps.youtube.music',
+    'com.soundcloud.android',
+
+    // Local music players
+    'com.android.music', // Stock Android Music
+    'com.miui.player', // Xiaomi Music
+    'com.samsung.android.app.music', // Samsung Music
+    'com.maxmpz.audioplayer', // Poweramp
+    'com.apple.android.music', // Apple Music
+    'com.aspiro.tidal', // TIDAL
+    'deezer.android.app', // Deezer
+    'com.sec.android.app.music', // Samsung Music (alt)
+    'com.asus.music', // ASUS Music
+    'com.oppo.music', // OPPO Music
+    'com.oneplus.music', // OnePlus Music
+    'com.lge.music', // LG Music
+    'com.sony.walkman.music', // Sony Walkman
+  };
+
+  String? packageName = evt.packageName;
+
+  // If not music notification, ignore
+  if (packageName == null) {
+    return false;
+  }
+
+  if (allowedPackages.contains(packageName)) {
+    return true;
+  }
+
+  final musicKeywords = ['music', 'player', 'audio', 'media', 'tune', 'sound'];
+  for (String keyword in musicKeywords) {
+    if (packageName.toLowerCase().contains(keyword)) {
+      if (evt.title != null && evt.title!.isNotEmpty) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 Future<void> main() async {
