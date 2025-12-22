@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_notification_listener/flutter_notification_listener.dart';
 import 'package:scrobbler/dashboard_page.dart';
+import 'package:scrobbler/home_page.dart';
 import 'package:scrobbler/recommendation_page.dart';
 
 String? _lastTitle;
@@ -210,30 +211,31 @@ class _ScrobblerHomeState extends State<ScrobblerHome> {
   Widget build(BuildContext context) {
     final List<Widget> pages = [
       // Page 1 : Home page
-      Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(_isListening ? "Service Running!" : "Service Inactive"),
-            SizedBox(height: 5),
-            Text("Last Detected Notification: "),
-            Text(
-              "$_currentSong - $_songArtist",
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-            ),
-            SizedBox(height: 5),
-            Text(
-              _currentPackage,
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-            ),
-            SizedBox(height: 5),
-            ElevatedButton(
-              onPressed: () => NotificationsListener.openPermissionSettings(),
-              child: Text("Open Permission Settings"),
-            ),
-          ],
-        ),
-      ),
+      // Center(
+      //   child: Column(
+      //     mainAxisAlignment: MainAxisAlignment.center,
+      //     children: [
+      //       Text(_isListening ? "Service Running!" : "Service Inactive"),
+      //       SizedBox(height: 5),
+      //       Text("Last Detected Notification: "),
+      //       Text(
+      //         "$_currentSong - $_songArtist",
+      //         style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+      //       ),
+      //       SizedBox(height: 5),
+      //       Text(
+      //         _currentPackage,
+      //         style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+      //       ),
+      //       SizedBox(height: 5),
+      //       ElevatedButton(
+      //         onPressed: () => NotificationsListener.openPermissionSettings(),
+      //         child: Text("Open Permission Settings"),
+      //       ),
+      //     ],
+      //   ),
+      // ),
+      const HomePage(),
 
       // Page 2 : Recommendations
       const RecommendationPage(),
@@ -243,7 +245,6 @@ class _ScrobblerHomeState extends State<ScrobblerHome> {
     ];
 
     return Scaffold(
-      appBar: AppBar(title: Text("Universal Scrobbler")),
       body: pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,

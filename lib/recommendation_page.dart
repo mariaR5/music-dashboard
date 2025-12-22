@@ -215,7 +215,7 @@ class _RecommendationPageState extends State<RecommendationPage> {
             // Credit Recommendations
             if (_creditRecs.isNotEmpty) ...[
               Text(
-                _creditRecs[0]['reason'],
+                _creditRecs[0]['reason'] ?? '',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
@@ -333,7 +333,7 @@ class _RecommendationPageState extends State<RecommendationPage> {
             // Sample recommendation
             if (_sampleRecs.isNotEmpty) ...[
               Text(
-                _sampleRecs[0]['reason'],
+                _sampleRecs[0]['reason'] ?? '',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
