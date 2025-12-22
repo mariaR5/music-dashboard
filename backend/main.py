@@ -160,7 +160,7 @@ def read_history(session: Session = Depends(get_session)):
     ).all()
     return scrobbles
 
-#====================STATS============================
+#======================================STATS===================================================
 
 # Apply month, year filters to query
 def apply_date_filter(query, month: Optional[int], year: Optional[int]):
@@ -249,7 +249,7 @@ def get_total_stats(
     }
 
 
-#====================RECOMMENDATIONS============================
+#=================================RECOMMENDATIONS===========================================
 
 # Recommendation engine => Recommend songs with the same flow and vibe as one of the top 5 songs
 
@@ -968,14 +968,12 @@ def get_sample_recommendations(session: Session = Depends(get_session)):
 
                     if result['tracks']['items']:
                         track = result['tracks']['items'][0]
-                    else:
-                        print("Not found on spotify")
 
                         reason = ''
                         if item['type'] == 'samples':
-                            reason = f'Sampled by {title}' # Ancestor
+                            reason = f'Sampled in {title}' # Ancestor
                         else:
-                            reason = f'Samples {title}' # Descendant
+                            reason = f'Samples from {title}' # Descendant
 
 
                         recommendations.append({
@@ -987,6 +985,9 @@ def get_sample_recommendations(session: Session = Depends(get_session)):
                         })
                         seen_songs.add(cand_title.lower())
                         print(f"Match found: {cand_title} - {cand_artist}")
+                    
+                    else:
+                        print("Not found on spotify")
 
                 except:
                     continue
