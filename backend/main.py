@@ -820,18 +820,52 @@ def get_artist_recommendations(session: Session = Depends(get_session)):
 
     for genre in search_seeds:
         try:
-            query = f"genre:{genre}"
-            results = sp.search(q=query, type='artist', limit=20)
+            # Search for playlists with this genre
+            playlist_results = sp.search(q=f'{genre} top artists', type='playlist', limit=3)
 
-            for item in results['artists']['items']:
-                artist_name = item['name']
+            # Check if playlist exists
+            if not playlist_results or 'playlists' not in playlist_results:
+                print(f'No playlists found for {genre}')
+                continue
 
-                # Skip if known artist
-                if artist_name.lower() in known_artists:
+            for playlist in playlist_results['playlists']['items']:
+                if not playlist:  # Skip None playlists
                     continue
+
+                try:
+                    # Get tracks from this playlist
+                    tracks_result = sp.playlist_tracks(playlist['id'], limit=30)
+
+                    if not tracks_result or 'items' not in tracks_result or not tracks_result['items']:
+                        print(f'No tracks found in playlist {playlist.get('name', 'Unknown')}')
+                        continue
+                    
+                    for item in tracks_result['items']:
+                        if not item['track']:
+                            continue
+                    
+                        track = item['track']
+                        artist = track['artists'][0]
+                        artist_name = artist['name']
+
+                        if artist_name.lower() in known_artists or artist['id'] in candidates:
+                            continue
+
+                        try:
+                            full_artist = sp.artist(artist['id'])
+
+                            if full_artist['popularity'] > 20:
+                                candidates[artist['id']] = full_artist
+                        except:
+                            continue
+                    
+                    if len(candidates) >= 50: break
                 
-                # Add to candidiate pool
-                candidates[item['id']] = item
+                except Exception as e:
+                    print(f'Error processing playlist: {e}')
+                    continue
+
+            if len(candidates) >= 50: break
 
         except Exception as e:
             print(f"Search error for {genre}: {e}")
@@ -849,14 +883,24 @@ def get_artist_recommendations(session: Session = Depends(get_session)):
         cand_genres = set(artist_obj['genres'])
 
         # Calculate intersection
-        overlap = cand_genres.intersection(user_genre_set)
+        overlap = list(cand_genres.intersection(user_genre_set))
         score = len(overlap)
+
+        # If no exact match, try fuzzy matching
+        if score == 0:
+            overlap = []
+            for user_genre in user_genre_set:
+                for cand_genre in cand_genres:
+                    if user_genre in cand_genre:
+                        overlap.append(user_genre)
+                        score += 0.5
+                        break
 
         if score > 0:
             scored_artists.append({
                 "artist": artist_obj,
                 "score": score,
-                "overlap": list(overlap)
+                "overlap": overlap
             })
 
 
