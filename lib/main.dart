@@ -7,9 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_notification_listener/flutter_notification_listener.dart';
-import 'package:scrobbler/dashboard_page.dart';
-import 'package:scrobbler/home_page.dart';
-import 'package:scrobbler/recommendation_page.dart';
+import 'package:scrobbler/pages/dashboard_page.dart';
+import 'package:scrobbler/pages/home_page.dart';
+import 'package:scrobbler/pages/recommendation_page.dart';
 
 String? _lastTitle;
 String? _lastArtist;
@@ -122,7 +122,14 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
 
-  runApp(const MaterialApp(home: ScrobblerHome()));
+  runApp(
+    MaterialApp(
+      theme: ThemeData.dark().copyWith(
+        scaffoldBackgroundColor: const Color(0xFF1A1A1A),
+      ),
+      home: ScrobblerHome(),
+    ),
+  );
 }
 
 class ScrobblerHome extends StatefulWidget {
@@ -235,7 +242,12 @@ class _ScrobblerHomeState extends State<ScrobblerHome> {
       //     ],
       //   ),
       // ),
-      const HomePage(),
+      HomePage(
+        currentTitle: _currentSong,
+        currentArtist: _songArtist,
+        currentPackage: _currentPackage,
+        isServiceRunning: _isListening,
+      ),
 
       // Page 2 : Recommendations
       const RecommendationPage(),
