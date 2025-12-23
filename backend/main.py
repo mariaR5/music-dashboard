@@ -153,12 +153,29 @@ async def receive_scrobble(req: Scrobble, session: Session = Depends(get_session
     }
 
 # See history : Defines http GET endpoint
-@app.get("/history", response_model=List[Scrobble])
-def read_history(session: Session = Depends(get_session)):
-    scrobbles = session.exec(
-        select(Scrobble).order_by(Scrobble.id.desc())
-    ).all()
+@app.get("/history")
+def read_history(
+    limit: Optional[int] = None,
+    session: Session = Depends(get_session)
+    ):
+    query = select(Scrobble).order_by(Scrobble.id.desc())
+
+    if limit:
+        query = query.limit(limit)
+    
+    scrobbles = session.exec(query).all()
     return scrobbles
+
+# Get the track album image
+@app.get('/track/image')
+def get_track_image(title: str, artist: str):
+    data = enrich_data(title, artist)
+
+    if data and 'image_url' in data:
+        return {'image_url': data['image_url']}
+    
+    return {'image_url': None}
+
 
 #======================================STATS===================================================
 
@@ -170,6 +187,50 @@ def apply_date_filter(query, month: Optional[int], year: Optional[int]):
     if year:
         query = query.where(extract('year', Scrobble.created_at) == year)
     return query
+
+@app.get("/stats/today")
+def get_today_stats(session: Session = Depends(get_session)):
+    # Get start of the day
+    now = datetime.now(timezone.utc)
+    start_of_day = datetime(now.year, now.month, now.day, tzinfo=timezone.utc) # 00:00:00 of today
+
+    # Get Total Plays
+    total_plays = session.exec(
+        select(func.count(Scrobble.id))
+        .where(Scrobble.created_at >= start_of_day)
+    ).one()
+
+    # Get total minutes listened
+    total_ms = session.exec(
+       select(func.sum(Scrobble.duration_ms))
+       .where(Scrobble.created_at >= start_of_day) 
+    ).one()
+    total_mins = int((total_ms or 0) / 60000)
+
+    artist_query = (
+        select(Scrobble.artist, Scrobble.artist_image, func.count(Scrobble.id).label('count'))
+        .where(Scrobble.created_at >= start_of_day)
+        .group_by(Scrobble.artist, Scrobble.artist_image)
+        .order_by(func.count(Scrobble.id).desc())
+        .limit(1)
+    )
+    top_artist = session.exec(artist_query).one()
+
+    if not top_artist:
+        return {
+            'total_plays': 0,
+            'minutes_listened': 0,
+            'top_artist_name': 'No Data',
+            'top_artist_image': None
+        }
+    
+    return {
+        'total_plays': total_plays,
+        'minutes_listened': total_mins,
+        'top_artist_name': top_artist.artist,
+        'top_artist_image': top_artist.artist_image
+    }
+
 
 # Get top 5 songs
 @app.get("/stats/top-songs")
