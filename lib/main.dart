@@ -218,30 +218,6 @@ class _ScrobblerHomeState extends State<ScrobblerHome> {
   Widget build(BuildContext context) {
     final List<Widget> pages = [
       // Page 1 : Home page
-      // Center(
-      //   child: Column(
-      //     mainAxisAlignment: MainAxisAlignment.center,
-      //     children: [
-      //       Text(_isListening ? "Service Running!" : "Service Inactive"),
-      //       SizedBox(height: 5),
-      //       Text("Last Detected Notification: "),
-      //       Text(
-      //         "$_currentSong - $_songArtist",
-      //         style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-      //       ),
-      //       SizedBox(height: 5),
-      //       Text(
-      //         _currentPackage,
-      //         style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-      //       ),
-      //       SizedBox(height: 5),
-      //       ElevatedButton(
-      //         onPressed: () => NotificationsListener.openPermissionSettings(),
-      //         child: Text("Open Permission Settings"),
-      //       ),
-      //     ],
-      //   ),
-      // ),
       HomePage(
         currentTitle: _currentSong,
         currentArtist: _songArtist,
@@ -258,19 +234,50 @@ class _ScrobblerHomeState extends State<ScrobblerHome> {
 
     return Scaffold(
       body: pages[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) => setState(() {
-          _selectedIndex = index;
-        }),
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.hearing), label: "Live"),
-          BottomNavigationBarItem(icon: Icon(Icons.explore), label: "Discover"),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.analytics),
-            label: "Dashbaord",
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Color(0XEE000000),
+              blurRadius: 24,
+              offset: const Offset(0, -8),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: BottomNavigationBar(
+            backgroundColor: const Color(0x55697565),
+            selectedItemColor: Colors.white,
+            selectedLabelStyle: TextStyle(fontSize: 10),
+            unselectedLabelStyle: TextStyle(fontSize: 10),
+            selectedIconTheme: IconThemeData(size: 30),
+            unselectedIconTheme: IconThemeData(size: 30),
+
+            currentIndex: _selectedIndex,
+            onTap: (index) => setState(() {
+              _selectedIndex = index;
+            }),
+            items: const [
+              BottomNavigationBarItem(
+                icon: Icon(Icons.home_outlined),
+                activeIcon: Icon(Icons.home),
+                label: "Home",
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.explore_outlined),
+                activeIcon: Icon(Icons.explore),
+                label: "Discover",
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.analytics_outlined),
+                activeIcon: Icon(Icons.analytics),
+                label: "Dashbaord",
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

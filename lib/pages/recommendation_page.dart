@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:scrobbler/widgets/recommend_section.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -76,334 +77,56 @@ class _RecommendationPageState extends State<RecommendationPage> {
     if (_isLoading) return const Center(child: CircularProgressIndicator());
 
     return Scaffold(
-      appBar: AppBar(title: Text("Discover")),
       body: RefreshIndicator(
         onRefresh: fetchRecommendations,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            // Flow recommendation
-            if (_flowRecs.isNotEmpty) ...[
-              Text(
-                _flowRecs[0]['reason'],
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                height: 200,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _flowRecs.length,
-                  itemBuilder: (context, index) {
-                    final song = _flowRecs[index];
-                    return GestureDetector(
-                      onTap: () {
-                        if (song["spotify_url"] != null) {
-                          _launchSpotify(song["spotify_url"]);
-                        } else {
-                          print("Cant launch spotify");
-                        }
-                      },
-                      child: Container(
-                        width: 140,
-                        margin: const EdgeInsets.only(right: 10),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
-                                song["image_url"],
-                                height: 140,
-                                width: 140,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                            const SizedBox(height: 5),
-                            Text(
-                              song["title"],
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              song["artist"],
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
+        child: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
               const SizedBox(height: 20),
-            ],
+              Text(
+                'For You...',
+                style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 40),
+              // 1. Vibe Recommender
+              RecommendSection(
+                title: _flowRecs[0]['reason'],
+                items: _flowRecs,
+                onTap: _launchSpotify,
+              ),
 
-            // Lyrical recommendations
-            if (_lyricRecs.isNotEmpty) ...[
-              Text(
-                _lyricRecs[0]['reason'],
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              // 2. Lyrical Recommender
+              RecommendSection(
+                title: _lyricRecs[0]['reason'],
+                items: _lyricRecs,
+                onTap: _launchSpotify,
               ),
-              const SizedBox(height: 10),
-              SizedBox(
-                height: 200,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _lyricRecs.length,
-                  itemBuilder: (context, index) {
-                    final song = _lyricRecs[index];
-                    return GestureDetector(
-                      onTap: () {
-                        if (song["spotify_url"] != null) {
-                          _launchSpotify(song["spotify_url"]);
-                        } else {
-                          print("Cant launch spotify");
-                        }
-                      },
-                      child: Container(
-                        width: 140,
-                        margin: const EdgeInsets.only(right: 10),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
-                                song["image_url"],
-                                height: 140,
-                                width: 140,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                            const SizedBox(height: 5),
-                            Text(
-                              song["title"],
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              song["artist"],
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 20),
-            ],
 
-            // Credit Recommendations
-            if (_creditRecs.isNotEmpty) ...[
-              Text(
-                _creditRecs[0]['reason'] ?? '',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              // 3. Artist Recommender
+              RecommendSection(
+                title: _artistRecs[0]['reason'],
+                items: _artistRecs,
+                onTap: _launchSpotify,
+                circularImage: true,
               ),
-              const SizedBox(height: 10),
-              SizedBox(
-                height: 200,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _creditRecs.length,
-                  itemBuilder: (context, index) {
-                    final song = _creditRecs[index];
-                    return GestureDetector(
-                      onTap: () {
-                        if (song["spotify_url"] != null) {
-                          _launchSpotify(song["spotify_url"]);
-                        } else {
-                          print("Cant launch spotify");
-                        }
-                      },
-                      child: Container(
-                        width: 140,
-                        margin: const EdgeInsets.only(right: 10),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
-                                song["image_url"],
-                                height: 140,
-                                width: 140,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                            const SizedBox(height: 5),
-                            Text(
-                              song["title"],
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              song["artist"],
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 20),
-            ],
 
-            // Artist Recommendations
-            if (_artistRecs.isNotEmpty) ...[
-              Text(
-                _artistRecs[0]['reason'],
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              // 4. Credits Recommender
+              RecommendSection(
+                title: _creditRecs[0]['reason'] ?? '',
+                items: _creditRecs,
+                onTap: _launchSpotify,
               ),
-              const SizedBox(height: 10),
-              SizedBox(
-                height: 200,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _artistRecs.length,
-                  itemBuilder: (context, index) {
-                    final song = _artistRecs[index];
-                    return GestureDetector(
-                      onTap: () {
-                        if (song["spotify_url"] != null) {
-                          _launchSpotify(song["spotify_url"]);
-                        } else {
-                          print("Cant launch spotify");
-                        }
-                      },
-                      child: Container(
-                        width: 140,
-                        margin: const EdgeInsets.only(right: 10),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            CircleAvatar(
-                              radius: 70,
-                              backgroundImage: NetworkImage(
-                                song['artist_image'],
-                              ),
-                            ),
-                            const SizedBox(height: 5),
-                            Text(
-                              song["artist"],
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 20),
-            ],
 
-            // Sample recommendation
-            if (_sampleRecs.isNotEmpty) ...[
-              Text(
-                _sampleRecs[0]['reason'] ?? '',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              // 5. Sample Recommender
+              RecommendSection(
+                title: _sampleRecs[0]['reason'] ?? '',
+                items: _sampleRecs,
+                showItemReason: true,
+                onTap: _launchSpotify,
               ),
-              const SizedBox(height: 10),
-              SizedBox(
-                height: 200,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _sampleRecs.length,
-                  itemBuilder: (context, index) {
-                    final song = _sampleRecs[index];
-                    return GestureDetector(
-                      onTap: () {
-                        if (song["spotify_url"] != null) {
-                          _launchSpotify(song["spotify_url"]);
-                        } else {
-                          print("Cant launch spotify");
-                        }
-                      },
-                      child: Container(
-                        width: 140,
-                        margin: const EdgeInsets.only(right: 10),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
-                                song["image_url"],
-                                height: 140,
-                                width: 140,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                            const SizedBox(height: 5),
-                            Text(
-                              song["title"],
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              song["artist"],
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey,
-                              ),
-                            ),
-                            Text(
-                              song["reason"],
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 8,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 20),
             ],
-          ],
+          ),
         ),
       ),
     );
