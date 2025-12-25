@@ -4,7 +4,6 @@ import 'package:http/http.dart' as http;
 import 'package:scrobbler/models/stats_model.dart';
 import 'package:scrobbler/widgets/stat_card.dart';
 import 'package:scrobbler/widgets/stats_list.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class DashboardPage extends StatefulWidget {
@@ -71,13 +70,6 @@ class _DashboardPageState extends State<DashboardPage> {
       setState(() {
         _isLoading = false;
       });
-    }
-  }
-
-  Future<void> _lauchSpotify(String url) async {
-    final Uri uri = Uri.parse(url);
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      throw Exception("Could not launch $url");
     }
   }
 

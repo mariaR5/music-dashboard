@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:scrobbler/models/daily_stats.dart';
 import 'package:scrobbler/models/scrobble.dart';
 import 'package:scrobbler/services/music_service.dart';
+import 'package:scrobbler/widgets/artist_card.dart';
+import 'package:scrobbler/widgets/recommend_section.dart';
+import 'package:scrobbler/widgets/stat_card.dart';
+
+import 'package:url_launcher/url_launcher.dart';
 
 class HomePage extends StatefulWidget {
   final String currentTitle;
@@ -83,6 +88,13 @@ class _HomePageState extends State<HomePage> {
         _recentSongs = results[0] as List<Scrobble>;
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _launchSpotify(String url) async {
+    final Uri uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      throw Exception("Could not launch $url");
     }
   }
 
@@ -192,88 +204,10 @@ class _HomePageState extends State<HomePage> {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Title
-                      Text(
-                        "Recently Played",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 24,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Horizontal List
-                      SizedBox(
-                        height: 200,
-                        child: _recentSongs.isEmpty
-                            ? Center(child: Text("No history yet"))
-                            : ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: _recentSongs.length,
-                                itemBuilder: (context, index) {
-                                  final song = _recentSongs[index];
-                                  return Padding(
-                                    padding: const EdgeInsets.only(right: 12),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.center,
-                                      children: [
-                                        // Album art
-                                        SizedBox(
-                                          width: 150,
-                                          child: AspectRatio(
-                                            aspectRatio: 1,
-                                            child: ClipRRect(
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                              child: song.imageUrl != null
-                                                  ? Image.network(
-                                                      song.imageUrl!,
-                                                      fit: BoxFit.cover,
-                                                    )
-                                                  : Icon(Icons.music_note),
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
-
-                                        // Song name
-                                        SizedBox(
-                                          width: 150,
-                                          child: Text(
-                                            song.title,
-                                            style: TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        ),
-                                        SizedBox(
-                                          width: 150,
-                                          child: Text(
-                                            song.artist,
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.normal,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                },
-                              ),
-                      ),
-                    ],
+                  child: RecommendSection(
+                    title: "Recently Played",
+                    items: _recentSongs,
+                    onTap: _launchSpotify,
                   ),
                 ),
               ),
@@ -307,45 +241,11 @@ class _HomePageState extends State<HomePage> {
                         ),
                         child: Padding(
                           padding: const EdgeInsets.all(8),
-                          child: Row(
-                            children: [
-                              // Artist Image
-                              CircleAvatar(
-                                radius: 35,
-                                backgroundColor: sageGreen,
-                                backgroundImage:
-                                    _todayStats?.topArtistImage != null
-                                    ? NetworkImage(_todayStats!.topArtistImage!)
-                                    : null,
-                                child: _todayStats?.topArtistImage == null
-                                    ? Icon(Icons.person)
-                                    : null,
-                              ),
-
-                              const SizedBox(width: 36),
-
-                              // Text
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    'Top Artist',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    _todayStats?.topArtistName ?? "-",
-                                    style: TextStyle(
-                                      fontSize: 32,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
+                          child: ArtistCard(
+                            title: "Top Artist",
+                            artist: _todayStats?.topArtistName ?? '-',
+                            imageUrl: _todayStats?.topArtistImage,
+                            sageGreen: sageGreen,
                           ),
                         ),
                       ),
@@ -353,68 +253,23 @@ class _HomePageState extends State<HomePage> {
 
                       // Stats Row
                       Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
+                          //---Total Plays---
                           Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                              decoration: BoxDecoration(
-                                color: sageGreen,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Column(
-                                children: [
-                                  Text(
-                                    'Total Plays',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '${_todayStats?.totalPlays ?? 0}',
-                                    style: TextStyle(
-                                      fontSize: 48,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                            child: StatCard(
+                              title: 'Total Plays',
+                              value: _todayStats?.totalPlays ?? 0,
+                              sageGreen: sageGreen,
                             ),
                           ),
                           const SizedBox(width: 16),
+                          //---Total Minutes
                           Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                              decoration: BoxDecoration(
-                                color: sageGreen,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Column(
-                                children: [
-                                  Text(
-                                    'Minutes Listened',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '${_todayStats?.minutesListened ?? 0}',
-                                    style: TextStyle(
-                                      fontSize: 48,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                            child: StatCard(
+                              title: 'Minutes Listened',
+                              value: _todayStats?.minutesListened ?? 0,
+                              sageGreen: sageGreen,
                             ),
                           ),
                         ],

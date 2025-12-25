@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:scrobbler/models/scrobble.dart';
 import 'song_card.dart';
 
 class RecommendSection extends StatelessWidget {
   final String title;
-  final List<dynamic> items;
-  final Function(String) onTap;
+  final List<Scrobble> items;
+  final Function(String)? onTap;
   final bool circularImage;
   final bool showItemReason;
 
@@ -37,22 +38,24 @@ class RecommendSection extends StatelessWidget {
             itemCount: items.length,
             itemBuilder: (context, index) {
               final song = items[index];
+              final String validImage =
+                  (song.imageUrl == null || song.imageUrl!.isEmpty)
+                  ? 'https://placehold.co/150'
+                  : song.imageUrl!;
 
               return Padding(
                 padding: const EdgeInsets.only(right: 10),
                 child: SongCard(
-                  imageUrl: circularImage
-                      ? song['artist_image']
-                      : song['image_url'],
-                  title: song['title'] ?? song['artist'],
-                  artist: song['artist'],
+                  imageUrl: validImage, // Fallback image
+                  title: circularImage ? song.artist : song.title,
+                  artist: circularImage ? '' : song.artist,
                   circularImage: circularImage,
                   onTap: () {
-                    if (song['spotify_url'] != null) {
-                      onTap(song['spotify_url']);
+                    if (song.spotifyUrl != null && onTap != null) {
+                      onTap!(song.spotifyUrl!);
                     }
                   },
-                  reason: song['reason'],
+                  reason: song.reason,
                   showItemReason: showItemReason,
                 ),
               );

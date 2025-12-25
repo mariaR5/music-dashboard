@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:scrobbler/models/scrobble.dart';
 import 'package:scrobbler/widgets/recommend_section.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -15,11 +16,11 @@ class RecommendationPage extends StatefulWidget {
 class _RecommendationPageState extends State<RecommendationPage> {
   final String baseUrl = dotenv.env['API_BASE_URL']!;
 
-  List<dynamic> _flowRecs = [];
-  List<dynamic> _lyricRecs = [];
-  List<dynamic> _creditRecs = [];
-  List<dynamic> _artistRecs = [];
-  List<dynamic> _sampleRecs = [];
+  List<Scrobble> _flowRecs = [];
+  List<Scrobble> _lyricRecs = [];
+  List<Scrobble> _creditRecs = [];
+  List<Scrobble> _artistRecs = [];
+  List<Scrobble> _sampleRecs = [];
   bool _isLoading = true;
 
   @override
@@ -42,19 +43,24 @@ class _RecommendationPageState extends State<RecommendationPage> {
         setState(() {
           // Process flow recs
           if (results[0].statusCode == 200) {
-            _flowRecs = jsonDecode(results[0].body);
+            final List<dynamic> data = jsonDecode(results[0].body);
+            _flowRecs = data.map((json) => Scrobble.fromJson(json)).toList();
           }
           if (results[1].statusCode == 200) {
-            _lyricRecs = jsonDecode(results[1].body);
+            final List<dynamic> data = jsonDecode(results[1].body);
+            _lyricRecs = data.map((json) => Scrobble.fromJson(json)).toList();
           }
           if (results[2].statusCode == 200) {
-            _creditRecs = jsonDecode(results[2].body);
+            final List<dynamic> data = jsonDecode(results[2].body);
+            _creditRecs = data.map((json) => Scrobble.fromJson(json)).toList();
           }
           if (results[3].statusCode == 200) {
-            _artistRecs = jsonDecode(results[3].body);
+            final List<dynamic> data = jsonDecode(results[3].body);
+            _artistRecs = data.map((json) => Scrobble.fromJson(json)).toList();
           }
           if (results[4].statusCode == 200) {
-            _sampleRecs = jsonDecode(results[4].body);
+            final List<dynamic> data = jsonDecode(results[4].body);
+            _sampleRecs = data.map((json) => Scrobble.fromJson(json)).toList();
           }
           _isLoading = false;
         });
@@ -91,21 +97,21 @@ class _RecommendationPageState extends State<RecommendationPage> {
               const SizedBox(height: 40),
               // 1. Vibe Recommender
               RecommendSection(
-                title: _flowRecs[0]['reason'],
+                title: _flowRecs[0].reason!,
                 items: _flowRecs,
                 onTap: _launchSpotify,
               ),
 
               // 2. Lyrical Recommender
               RecommendSection(
-                title: _lyricRecs[0]['reason'],
+                title: _lyricRecs[0].reason!,
                 items: _lyricRecs,
                 onTap: _launchSpotify,
               ),
 
               // 3. Artist Recommender
               RecommendSection(
-                title: _artistRecs[0]['reason'],
+                title: _artistRecs[0].reason!,
                 items: _artistRecs,
                 onTap: _launchSpotify,
                 circularImage: true,
@@ -113,14 +119,14 @@ class _RecommendationPageState extends State<RecommendationPage> {
 
               // 4. Credits Recommender
               RecommendSection(
-                title: _creditRecs[0]['reason'] ?? '',
+                title: _creditRecs[0].reason ?? '',
                 items: _creditRecs,
                 onTap: _launchSpotify,
               ),
 
               // 5. Sample Recommender
               RecommendSection(
-                title: _sampleRecs[0]['reason'] ?? '',
+                title: _sampleRecs[0].reason ?? '',
                 items: _sampleRecs,
                 showItemReason: true,
                 onTap: _launchSpotify,

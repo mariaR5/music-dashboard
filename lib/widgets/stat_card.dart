@@ -4,14 +4,12 @@ class StatCard extends StatelessWidget {
   final String title;
   final int value;
   final Color sageGreen;
-  final bool isFullWidth;
 
   const StatCard({
     super.key,
     required this.title,
     required this.value,
     required this.sageGreen,
-    this.isFullWidth = false,
   });
 
   @override
@@ -31,7 +29,7 @@ class StatCard extends StatelessWidget {
           ),
           Text(
             '$value',
-            style: TextStyle(fontSize: 64, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold),
           ),
         ],
       ),

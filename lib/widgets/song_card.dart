@@ -32,7 +32,20 @@ class SongCard extends StatelessWidget {
             circularImage
                 ? CircleAvatar(
                     radius: 70,
-                    backgroundImage: NetworkImage(imageUrl),
+                    child: ClipOval(
+                      child: Image.network(
+                        imageUrl,
+                        width: 140,
+                        height: 140,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: Colors.grey,
+                            child: Icon(Icons.music_note),
+                          );
+                        },
+                      ),
+                    ),
                   )
                 : ClipRRect(
                     borderRadius: BorderRadius.circular(8),
@@ -41,6 +54,14 @@ class SongCard extends StatelessWidget {
                       height: 150,
                       width: 150,
                       fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          width: 150,
+                          height: 150,
+                          color: Colors.grey,
+                          child: Icon(Icons.music_note),
+                        );
+                      },
                     ),
                   ),
 
