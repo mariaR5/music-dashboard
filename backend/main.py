@@ -214,7 +214,7 @@ def get_today_stats(session: Session = Depends(get_session)):
         .order_by(func.count(Scrobble.id).desc())
         .limit(1)
     )
-    top_artist = session.exec(artist_query).one()
+    top_artist = session.exec(artist_query).first()
 
     if not top_artist:
         return {

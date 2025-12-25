@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:scrobbler/models/stats_model.dart';
+import 'package:scrobbler/widgets/stat_card.dart';
+import 'package:scrobbler/widgets/stats_list.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -81,22 +83,24 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
+    final Color sageGreen = Color(0xFF697565);
+    final Color bgGrey = const Color(0xFF1A1A1A);
+
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          "Your listening vibe",
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 25),
-        ),
+        backgroundColor: bgGrey,
+        surfaceTintColor: sageGreen,
+        elevation: 12,
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: DropdownButton<int>(
               value: _selectedMonth,
-              icon: Icon(Icons.filter_alt, color: Colors.black, size: 28),
+              icon: Icon(Icons.filter_alt, color: sageGreen, size: 28),
               underline: Container(),
               items: [
                 DropdownMenuItem(value: 0, child: Text("All Time")),
@@ -120,91 +124,54 @@ class _DashboardPageState extends State<DashboardPage> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            //---Total Plays---
-            _buildStatCard("Total Plays", "$_totalPlays", Colors.red),
-            const SizedBox(height: 10),
+            Text(
+              "Your Listening Vibe",
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 40),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                //---Total Plays---
+                Expanded(
+                  child: StatCard(
+                    title: 'Total Plays',
+                    value: _totalPlays,
+                    sageGreen: sageGreen,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                //---Total Minutes
+                Expanded(
+                  child: StatCard(
+                    title: 'Minutes Listened',
+                    value: _totalMinutes,
+                    sageGreen: sageGreen,
+                  ),
+                ),
+              ],
+            ),
 
-            //---Total Minutes
-            _buildStatCard('Minutes Listened', "$_totalMinutes", Colors.green),
-            const SizedBox(height: 30),
-
+            const SizedBox(height: 40),
             //---Top Songs---
             const Text(
-              "Top 5 songs",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              "Top Songs",
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
-            ..._topSongs.map(
-              (song) => ListTile(
-                leading: song.imageUrl != null
-                    ? Image.network(
-                        song.imageUrl!,
-                        width: 50,
-                        height: 50,
-                        fit: BoxFit.cover,
-                      )
-                    : const Icon(Icons.music_note),
-                title: Text(
-                  song.title,
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                subtitle: Text(song.artist),
-                trailing: Text("${song.plays} plays"),
-              ),
-            ),
+            TopSongsList(topSongs: _topSongs),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 40),
 
             //---Top Artists---
             const Text(
-              "Top 5 artists",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              "Top Artists",
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
-            ..._topArtists.map(
-              (artist) => Card(
-                child: ListTile(
-                  leading: artist.artistImage != null
-                      ? CircleAvatar(
-                          radius: 25,
-                          backgroundImage: NetworkImage(artist.artistImage!),
-                        )
-                      : const Icon(Icons.person),
-                  title: Text(
-                    artist.artist,
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  trailing: Text("${artist.plays} plays"),
-                ),
-              ),
-            ),
+            TopArtistsList(topArtists: _topArtists),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildStatCard(String title, String value, Color color) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: color.withValues(),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: color),
-      ),
-      child: Column(
-        children: [
-          Text(title, style: TextStyle(color: Colors.white, fontSize: 16)),
-          Text(
-            value,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
       ),
     );
   }
