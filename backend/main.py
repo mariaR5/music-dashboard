@@ -161,7 +161,17 @@ def read_history(
     query = select(Scrobble).order_by(Scrobble.id.desc())
 
     if limit:
-        query = query.limit(limit)
+        subquery = (
+            select(Scrobble.title, Scrobble.artist, func.max(Scrobble.id).label('latest_id'))
+            .group_by(Scrobble.title, Scrobble.artist)
+            .subquery()
+        )
+        query = (
+            select(Scrobble)
+            .join(subquery, Scrobble.id == subquery.c.latest_id)
+            .order_by(Scrobble.id.desc())
+            .limit(limit)
+        )
     
     scrobbles = session.exec(query).all()
     return scrobbles
