@@ -28,7 +28,7 @@ class TopSongsList extends StatelessWidget {
                   style: TextStyle(
                     color: const Color(0xFF697565),
                     fontWeight: FontWeight.bold,
-                    fontSize: 18,
+                    fontSize: 16,
                   ),
                 ),
               ),
@@ -55,7 +55,7 @@ class TopSongsList extends StatelessWidget {
                     Text(
                       song.title,
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                       overflow: TextOverflow.fade,
@@ -107,7 +107,7 @@ class TopArtistsList extends StatelessWidget {
                 ),
               ),
 
-              // Album Art
+              // Artist image
               CircleAvatar(
                 radius: 40,
                 backgroundImage: artist.artistImage != null
@@ -120,7 +120,7 @@ class TopArtistsList extends StatelessWidget {
               Expanded(
                 child: Text(
                   artist.artist,
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   overflow: TextOverflow.fade,
                 ),
               ),

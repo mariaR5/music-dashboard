@@ -3,6 +3,7 @@ import 'package:scrobbler/models/daily_stats.dart';
 import 'package:scrobbler/models/scrobble.dart';
 import 'package:scrobbler/services/music_service.dart';
 import 'package:scrobbler/widgets/artist_card.dart';
+import 'package:scrobbler/widgets/now_playing.dart';
 import 'package:scrobbler/widgets/recommend_section.dart';
 import 'package:scrobbler/widgets/stat_card.dart';
 
@@ -107,13 +108,18 @@ class _HomePageState extends State<HomePage> {
           onRefresh: _loadData,
           child: CustomScrollView(
             slivers: [
-              // Top status badge and profile icon
+              //=========Top status badge and profile icon=============
               SliverPadding(
                 padding: EdgeInsetsGeometry.all(16),
                 sliver: SliverToBoxAdapter(
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      CircleAvatar(
+                        radius: 25,
+                        backgroundColor: const Color(0xFF3B3B3B),
+                        child: Icon(Icons.person, color: Colors.white),
+                      ),
                       Container(
                         height: 40,
                         padding: EdgeInsets.symmetric(
@@ -121,18 +127,13 @@ class _HomePageState extends State<HomePage> {
                           horizontal: 10,
                         ),
                         decoration: BoxDecoration(
-                          color: sageGreen,
-                          borderRadius: BorderRadius.circular(20),
+                          color: const Color(0xFF3B3B3B),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
                           'Playing on spotify',
                           style: TextStyle(fontSize: 16),
                         ),
-                      ),
-                      CircleAvatar(
-                        radius: 25,
-                        backgroundColor: sageGreen,
-                        child: Icon(Icons.person),
                       ),
                     ],
                   ),
@@ -152,48 +153,16 @@ class _HomePageState extends State<HomePage> {
                           "Now Playing...",
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            fontSize: 24,
+                            fontSize: 20,
                           ),
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 36),
 
-                      // Album art, song name and artist
-                      Align(
-                        alignment: Alignment.center,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              height: 200,
-                              width: 200,
-                              color: sageGreen,
-                              child: ClipRRect(
-                                child: _currentTrackImage != null
-                                    ? Image.network(
-                                        _currentTrackImage!,
-                                        fit: BoxFit.cover,
-                                      )
-                                    : Icon(Icons.music_note),
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            Text(
-                              widget.currentTitle,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 24,
-                              ),
-                            ),
-                            Text(
-                              widget.currentArtist,
-                              style: TextStyle(
-                                fontWeight: FontWeight.w300,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
+                      NowPlaying(
+                        title: widget.currentTitle,
+                        artist: widget.currentArtist,
+                        imageUrl: _currentTrackImage,
                       ),
                     ],
                   ),
@@ -230,26 +199,13 @@ class _HomePageState extends State<HomePage> {
                       const SizedBox(height: 24),
 
                       // Top artist
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: sageGreen,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: ArtistCard(
-                            title: "Top Artist",
-                            artist: _todayStats?.topArtistName ?? '-',
-                            imageUrl: _todayStats?.topArtistImage,
-                            sageGreen: sageGreen,
-                          ),
-                        ),
+                      ArtistCard(
+                        title: "Top Artist",
+                        artist: _todayStats?.topArtistName ?? '-',
+                        imageUrl: _todayStats?.topArtistImage,
+                        sageGreen: sageGreen,
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 8),
 
                       // Stats Row
                       Row(
@@ -263,7 +219,7 @@ class _HomePageState extends State<HomePage> {
                               sageGreen: sageGreen,
                             ),
                           ),
-                          const SizedBox(width: 16),
+                          const SizedBox(width: 8),
                           //---Total Minutes
                           Expanded(
                             child: StatCard(
