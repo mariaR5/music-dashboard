@@ -6,6 +6,7 @@ import 'package:scrobbler/widgets/artist_card.dart';
 import 'package:scrobbler/widgets/now_playing.dart';
 import 'package:scrobbler/widgets/recommend_section.dart';
 import 'package:scrobbler/widgets/stat_card.dart';
+import 'package:scrobbler/widgets/status_card.dart';
 
 import 'package:url_launcher/url_launcher.dart';
 
@@ -120,20 +121,10 @@ class _HomePageState extends State<HomePage> {
                         backgroundColor: const Color(0xFF3B3B3B),
                         child: Icon(Icons.person, color: Colors.white),
                       ),
-                      Container(
-                        height: 40,
-                        padding: EdgeInsets.symmetric(
-                          vertical: 5,
-                          horizontal: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF3B3B3B),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          'Playing on spotify',
-                          style: TextStyle(fontSize: 16),
-                        ),
+
+                      StatusCard(
+                        isServiceRunning: widget.isServiceRunning,
+                        currentPackage: widget.currentPackage,
                       ),
                     ],
                   ),
