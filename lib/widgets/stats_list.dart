@@ -42,7 +42,12 @@ class TopSongsList extends StatelessWidget {
                         height: 80,
                         fit: BoxFit.cover,
                       )
-                    : Icon(Icons.music_note),
+                    : Container(
+                        width: 80,
+                        height: 80,
+                        color: const Color(0xFF3B3B3B),
+                        child: Icon(Icons.music_note),
+                      ),
               ),
               const SizedBox(width: 20),
 
@@ -58,12 +63,14 @@ class TopSongsList extends StatelessWidget {
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
-                      overflow: TextOverflow.fade,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     Text(
                       song.artist,
                       style: TextStyle(fontSize: 12),
-                      overflow: TextOverflow.fade,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),

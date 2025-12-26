@@ -96,41 +96,47 @@ class _RecommendationPageState extends State<RecommendationPage> {
               ),
               const SizedBox(height: 40),
               // 1. Vibe Recommender
-              RecommendSection(
-                title: _flowRecs[0].reason!,
-                items: _flowRecs,
-                onTap: _launchSpotify,
-              ),
-
+              if (_flowRecs.isNotEmpty)
+                RecommendSection(
+                  title: _flowRecs.first.reason ?? '',
+                  items: _flowRecs,
+                  onTap: _launchSpotify,
+                ),
+              const SizedBox(height: 30),
               // 2. Lyrical Recommender
-              RecommendSection(
-                title: _lyricRecs[0].reason!,
-                items: _lyricRecs,
-                onTap: _launchSpotify,
-              ),
-
+              if (_lyricRecs.isNotEmpty)
+                RecommendSection(
+                  title: _lyricRecs.first.reason ?? '',
+                  items: _lyricRecs,
+                  onTap: _launchSpotify,
+                ),
+              const SizedBox(height: 30),
               // 3. Artist Recommender
-              RecommendSection(
-                title: _artistRecs[0].reason!,
-                items: _artistRecs,
-                onTap: _launchSpotify,
-                circularImage: true,
-              ),
+              if (_artistRecs.isNotEmpty)
+                RecommendSection(
+                  title: _artistRecs.first.reason ?? '',
+                  items: _artistRecs,
+                  onTap: _launchSpotify,
+                  circularImage: true,
+                ),
 
               // 4. Credits Recommender
-              RecommendSection(
-                title: _creditRecs[0].reason ?? '',
-                items: _creditRecs,
-                onTap: _launchSpotify,
-              ),
-
+              if (_creditRecs.isNotEmpty)
+                RecommendSection(
+                  title: _creditRecs.first.reason ?? '',
+                  items: _creditRecs,
+                  onTap: _launchSpotify,
+                ),
+              const SizedBox(height: 30),
               // 5. Sample Recommender
-              RecommendSection(
-                title: _sampleRecs[0].reason ?? '',
-                items: _sampleRecs,
-                showItemReason: true,
-                onTap: _launchSpotify,
-              ),
+              if (_sampleRecs.isNotEmpty)
+                RecommendSection(
+                  title: 'Samples of your favorites',
+                  items: _sampleRecs,
+                  showItemReason: true,
+                  onTap: _launchSpotify,
+                ),
+              const SizedBox(height: 30),
             ],
           ),
         ),

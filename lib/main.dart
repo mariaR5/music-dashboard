@@ -233,7 +233,7 @@ class _ScrobblerHomeState extends State<ScrobblerHome> {
       const DashboardPage(),
     ];
 
-    void _onItemTapped(int index) {
+    void onItemTapped(int index) {
       setState(() {
         _selectedIndex = index;
       });
@@ -243,7 +243,7 @@ class _ScrobblerHomeState extends State<ScrobblerHome> {
       body: IndexedStack(index: _selectedIndex, children: _pages),
       bottomNavigationBar: CustomNavbar(
         selectedIndex: _selectedIndex,
-        onItemSelected: _onItemTapped,
+        onItemSelected: onItemTapped,
       ),
     );
   }

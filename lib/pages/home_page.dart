@@ -155,6 +155,7 @@ class _HomePageState extends State<HomePage> {
                         artist: widget.currentArtist,
                         imageUrl: _currentTrackImage,
                       ),
+                      const SizedBox(height: 8),
                     ],
                   ),
                 ),

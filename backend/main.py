@@ -242,11 +242,12 @@ def get_today_stats(session: Session = Depends(get_session)):
     }
 
 
-# Get top 5 songs
+# Get top songs
 @app.get("/stats/top-songs")
 def get_top_songs(
     month: Optional[int] = None,
     year: Optional[int] = None,
+    limit: int = 5,
     session: Session = Depends(get_session)
     ):
     # Select title, artist, image_url, count(id) as plays from Scrobble 
@@ -257,7 +258,7 @@ def get_top_songs(
         select(Scrobble.title, Scrobble.artist, Scrobble.image_url, func.count(Scrobble.id).label("plays"))
         .group_by(Scrobble.title, Scrobble.artist, Scrobble.image_url)
         .order_by(func.count(Scrobble.id).desc())
-        .limit(5)
+        .limit(limit)
     )
 
     # Filter query with month and year
@@ -271,18 +272,19 @@ def get_top_songs(
     ]
 
 
-# Get top 5 artists
+# Get top artists
 @app.get("/stats/top-artists")
 def get_top_artists(
     month: Optional[int] = None,
     year: Optional[int] = None,
+    limit: int = 5,
     session: Session = Depends(get_session)
     ):
     query = (
         select(Scrobble.artist, Scrobble.artist_image, func.count(Scrobble.id).label("plays"))
         .group_by(Scrobble.artist)
         .order_by(func.count(Scrobble.id).desc())
-        .limit(5)
+        .limit(limit)
     )
     query = apply_date_filter(query, month, year)
 

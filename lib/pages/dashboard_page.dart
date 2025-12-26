@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:scrobbler/models/stats_model.dart';
+import 'package:scrobbler/pages/top_items_page.dart';
 import 'package:scrobbler/widgets/stat_card.dart';
 import 'package:scrobbler/widgets/stats_list.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -21,20 +22,25 @@ class _DashboardPageState extends State<DashboardPage> {
   List<TopSong> _topSongs = [];
   List<TopArtist> _topArtists = [];
 
-  int _selectedMonth = 0; // 0: All time, 1: Jan, 2: Feb,.....
+  late int _selectedMonth; // 0: All time, 1: Jan, 2: Feb,.....
+  late int _selectedYear;
 
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
+
+    final now = DateTime.now();
+    _selectedMonth = now.month;
+    _selectedYear = now.year;
     fetchStats();
   }
 
   Future<void> fetchStats() async {
     String queryParams = ""; // empty query for all time
     if (_selectedMonth != 0) {
-      queryParams = "?month=$_selectedMonth&year=2025";
+      queryParams = "?month=$_selectedMonth&year=$_selectedYear";
     }
 
     try {
@@ -73,6 +79,25 @@ class _DashboardPageState extends State<DashboardPage> {
     }
   }
 
+  Widget _buildSectionHeader(String title, VoidCallback onSeeAll) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        ),
+        TextButton(
+          onPressed: onSeeAll,
+          child: const Text(
+            'See All',
+            style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final Color sageGreen = Color(0xFF697565);
@@ -103,6 +128,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 if (newValue != null) {
                   setState(() {
                     _selectedMonth = newValue;
+                    _isLoading = true;
                   });
                   fetchStats();
                 }
@@ -146,20 +172,38 @@ class _DashboardPageState extends State<DashboardPage> {
 
             const SizedBox(height: 40),
             //---Top Songs---
-            const Text(
-              "Top Songs",
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
+            _buildSectionHeader('Top Songs', () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => TopItemsPage(
+                    title: 'Top Songs',
+                    type: 'songs',
+                    month: _selectedMonth,
+                    year: _selectedYear,
+                  ),
+                ),
+              );
+            }),
             const SizedBox(height: 10),
             TopSongsList(topSongs: _topSongs),
 
             const SizedBox(height: 40),
 
             //---Top Artists---
-            const Text(
-              "Top Artists",
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
+            _buildSectionHeader('Top Artists', () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => TopItemsPage(
+                    title: 'Top Artists',
+                    type: 'artists',
+                    month: _selectedMonth,
+                    year: _selectedYear,
+                  ),
+                ),
+              );
+            }),
             const SizedBox(height: 10),
             TopArtistsList(topArtists: _topArtists),
           ],

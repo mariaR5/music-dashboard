@@ -29,7 +29,7 @@ class RecommendSection extends StatelessWidget {
           title,
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 20),
 
         SizedBox(
           height: 220,
