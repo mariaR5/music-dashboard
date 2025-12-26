@@ -72,6 +72,23 @@ class TopSongsList extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
+                    const SizedBox(height: 5),
+                    // No. of plays
+                    Container(
+                      height: 20,
+                      padding: const EdgeInsets.symmetric(horizontal: 5),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        color: Color(0xFF697565),
+                      ),
+                      child: Text(
+                        '${song.plays} plays',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -123,12 +140,39 @@ class TopArtistsList extends StatelessWidget {
                 child: artist.artistImage == null ? Icon(Icons.person) : null,
               ),
               const SizedBox(width: 20),
-              // Title and artist
+              // Artist
               Expanded(
-                child: Text(
-                  artist.artist,
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  overflow: TextOverflow.fade,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      artist.artist,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 5),
+                    // No. of plays
+                    Container(
+                      height: 20,
+                      padding: const EdgeInsets.symmetric(horizontal: 5),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        color: Color(0xFF697565),
+                      ),
+                      child: Text(
+                        '${artist.plays} plays',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
