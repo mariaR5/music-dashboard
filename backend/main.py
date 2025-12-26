@@ -328,13 +328,19 @@ client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 @app.get("/recommend/vibes")
 def get_vibe_recommendations(session: Session = Depends(get_session)):
-    # get top artist
+    # Get current month and year
+    now = datetime.now(timezone.utc)
+
+    # get top 5 songs
     query = (
         select(Scrobble.title, Scrobble.artist)
         .group_by(Scrobble.title, Scrobble.artist)
         .order_by(func.count(Scrobble.id).desc())
         .limit(5)
     )
+    
+    # Apply date filter
+    query = apply_date_filter(query, month=now.month, year=now.year)
     top_tracks = session.exec(query).all()
 
     if not top_tracks:
@@ -462,6 +468,7 @@ genius.verbose = False # Turn off status messages
 
 @app.get("/recommend/lyrics")
 def get_lyrical_recommendations(session: Session = Depends(get_session)):
+    now = datetime.now(timezone.utc)
     # get top 5 songs
     query = (
         select(Scrobble.title, Scrobble.artist)
@@ -469,6 +476,9 @@ def get_lyrical_recommendations(session: Session = Depends(get_session)):
         .order_by(func.count(Scrobble.id).desc())
         .limit(5)
     )
+
+    # Apply date filter
+    query = apply_date_filter(query, month=now.month, year=now.year)
     top_tracks = session.exec(query).all()
 
     if not top_tracks:
@@ -620,6 +630,8 @@ def get_credits_recommendations(session: Session = Depends(get_session)):
 
     # Create a set of tuples of history
     known_songs = {(row.title.lower(), row.artist.lower()) for row in history_rows}
+
+    now = datetime.now(timezone.utc)
     
     # get top 5 songs
     query = (
@@ -628,6 +640,8 @@ def get_credits_recommendations(session: Session = Depends(get_session)):
         .order_by(func.count(Scrobble.id).desc())
         .limit(5)
     )
+    # Apply date filter
+    query = apply_date_filter(query, month=now.month, year=now.year)
     top_tracks = session.exec(query).all()
 
     if not top_tracks:
@@ -999,6 +1013,7 @@ def get_artist_recommendations(session: Session = Depends(get_session)):
 # Recommendation engine => Recommend songs sampled from/sampled in users top songs
 @app.get('/recommend/samples')
 def get_sample_recommendations(session: Session = Depends(get_session)):
+    now = datetime.now(timezone.utc)
     # get top 20 songs
     query = (
         select(Scrobble.title, Scrobble.artist)
@@ -1006,6 +1021,8 @@ def get_sample_recommendations(session: Session = Depends(get_session)):
         .order_by(func.count(Scrobble.id).desc())
         .limit(30)
     )
+    # Apply date filter
+    query = apply_date_filter(query, month=now.month, year=now.year)
     top_tracks = session.exec(query).all()
 
     if not top_tracks:
