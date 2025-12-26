@@ -10,6 +10,7 @@ import 'package:flutter_notification_listener/flutter_notification_listener.dart
 import 'package:scrobbler/pages/dashboard_page.dart';
 import 'package:scrobbler/pages/home_page.dart';
 import 'package:scrobbler/pages/recommendation_page.dart';
+import 'package:scrobbler/widgets/custom_navbar.dart';
 
 String? _lastTitle;
 String? _lastArtist;
@@ -216,7 +217,7 @@ class _ScrobblerHomeState extends State<ScrobblerHome> {
 
   @override
   Widget build(BuildContext context) {
-    final List<Widget> pages = [
+    final List<Widget> _pages = [
       // Page 1 : Home page
       HomePage(
         currentTitle: _currentSong,
@@ -232,52 +233,17 @@ class _ScrobblerHomeState extends State<ScrobblerHome> {
       const DashboardPage(),
     ];
 
-    return Scaffold(
-      body: pages[_selectedIndex],
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Color(0XEE000000),
-              blurRadius: 24,
-              offset: const Offset(0, -8),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: BottomNavigationBar(
-            backgroundColor: const Color(0x55697565),
-            selectedItemColor: Colors.white,
-            selectedLabelStyle: TextStyle(fontSize: 10),
-            unselectedLabelStyle: TextStyle(fontSize: 10),
-            selectedIconTheme: IconThemeData(size: 30),
-            unselectedIconTheme: IconThemeData(size: 30),
+    void _onItemTapped(int index) {
+      setState(() {
+        _selectedIndex = index;
+      });
+    }
 
-            currentIndex: _selectedIndex,
-            onTap: (index) => setState(() {
-              _selectedIndex = index;
-            }),
-            items: const [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.home_outlined),
-                activeIcon: Icon(Icons.home),
-                label: "Home",
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.explore_outlined),
-                activeIcon: Icon(Icons.explore),
-                label: "Discover",
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.analytics_outlined),
-                activeIcon: Icon(Icons.analytics),
-                label: "Dashbaord",
-              ),
-            ],
-          ),
-        ),
+    return Scaffold(
+      body: IndexedStack(index: _selectedIndex, children: _pages),
+      bottomNavigationBar: CustomNavbar(
+        selectedIndex: _selectedIndex,
+        onItemSelected: _onItemTapped,
       ),
     );
   }
