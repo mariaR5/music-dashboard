@@ -68,7 +68,7 @@ class _StatusCardState extends State<StatusCard> {
       key = const ValueKey('running');
     } else {
       final packageName = appNameMap[widget.currentPackage];
-      textToShow = widget.currentPackage.isEmpty
+      textToShow = widget.currentPackage.isEmpty || packageName == null
           ? "Waiting for music..."
           : "Listening on $packageName";
       key = const ValueKey('package');

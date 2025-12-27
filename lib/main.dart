@@ -10,6 +10,7 @@ import 'package:flutter_notification_listener/flutter_notification_listener.dart
 import 'package:scrobbler/pages/dashboard_page.dart';
 import 'package:scrobbler/pages/home_page.dart';
 import 'package:scrobbler/pages/recommendation_page.dart';
+import 'package:scrobbler/services/auth_service.dart';
 import 'package:scrobbler/widgets/custom_navbar.dart';
 
 String? _lastTitle;
@@ -56,10 +57,16 @@ void _callback(NotificationEvent evt) async {
     // Send data to python backend
     final String backendURL = dotenv.env['API_BASE_URL']!;
 
+    // Get token from flutter storage
+    final token = await AuthService.getToken();
+
     try {
       final response = await http.post(
         Uri.parse('$backendURL/scrobble'),
-        headers: {"Content-Type": "application/json"},
+        headers: {
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json",
+        },
         body: jsonEncode({
           "title": _lastTitle,
           "artist": _lastArtist,

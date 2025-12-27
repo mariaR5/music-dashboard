@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:scrobbler/models/scrobble.dart';
+import 'package:scrobbler/services/auth_service.dart';
 import 'package:scrobbler/widgets/recommend_section.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -31,12 +32,29 @@ class _RecommendationPageState extends State<RecommendationPage> {
 
   Future<void> fetchRecommendations() async {
     try {
+      final token = await AuthService.getToken();
+
       final results = await Future.wait([
-        http.get(Uri.parse("$baseUrl/recommend/vibes")),
-        http.get(Uri.parse("$baseUrl/recommend/lyrics")),
-        http.get(Uri.parse("$baseUrl/recommend/credits")),
-        http.get(Uri.parse("$baseUrl/recommend/artists")),
-        http.get(Uri.parse("$baseUrl/recommend/samples")),
+        http.get(
+          Uri.parse("$baseUrl/recommend/vibes"),
+          headers: {"Authorization": "Bearer $token"},
+        ),
+        http.get(
+          Uri.parse("$baseUrl/recommend/lyrics"),
+          headers: {"Authorization": "Bearer $token"},
+        ),
+        http.get(
+          Uri.parse("$baseUrl/recommend/credits"),
+          headers: {"Authorization": "Bearer $token"},
+        ),
+        http.get(
+          Uri.parse("$baseUrl/recommend/artists"),
+          headers: {"Authorization": "Bearer $token"},
+        ),
+        http.get(
+          Uri.parse("$baseUrl/recommend/samples"),
+          headers: {"Authorization": "Bearer $token"},
+        ),
       ]);
 
       if (mounted) {

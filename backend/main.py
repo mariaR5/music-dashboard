@@ -4,12 +4,17 @@ import time
 import random
 import requests
 from dotenv import load_dotenv
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+
 from sqlmodel import SQLModel, Session, create_engine, Field, select
 from sqlalchemy import func, extract
 from typing import Optional, List
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from collections import Counter
+
+from passlib.context import CryptContext
+from jose import jwt, JWTError
 
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
@@ -20,10 +25,16 @@ import musicbrainzngs
 # Load secrets from .env
 load_dotenv()
 
-# print("---------------------------------")
-# print(f"DEBUG: SPOTIPY_CLIENT_ID: {os.getenv("SPOTIPY_CLIENT_ID")}")
-# print(f"DEBUG: SPOTIPY_CLIENT_SECRET: {os.getenv("SPOTIPY_CLIENT_SECRET")}")
-# print("---------------------------------")
+# Security config for JWT
+SECRET_KEY = os.getenv('JWT_SECRET_KEY')
+ALGORITHM = 'HS256'
+ACCESS_TOKEN_EXPIRY_MINUTES = 30000
+
+# Password hasing wrapper
+pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
+
+# Method to extract token
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl = 'token')
 
 # Create spotify client
 sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
@@ -38,9 +49,17 @@ sqllite_url = f"sqlite:///{sqllite_file_name}" # database url
 # Create engine -> responsible for database connection
 engine = create_engine(sqllite_url)
 
-# Define the table
+# USER TABLE
+class User(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    username: str = Field(index=True, unique=True)
+    hashed_password = str
+
+
+# SCROBBLE TABLE
 class Scrobble(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key='user.id')
     title: str
     artist: str
     package: str
@@ -55,7 +74,8 @@ class Scrobble(SQLModel, table=True):
     artist_image: Optional[str] = None
     genres: Optional[str] = None
 
-# Table to store AI results
+
+# CACHE TABLE -> Stores AI recs results
 class AICache(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     seed_title: str
@@ -119,21 +139,97 @@ def get_session():
     with Session(engine) as session:
         yield session
 
+# Verify password
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+# Hash password
+def get_password_hash(password):
+    return pwd_context.hash(password)
+
+# Create JWT access token -> header.payload.signature
+def create_access_token(data: dict):
+    # Header is created automatically and signature is created by applying the algorithm with header payload and secret key 
+    to_encode = data.copy()
+    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRY_MINUTES)
+    
+    to_encode.update({'exp': expire}) # Payload
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+
+# Get current user to let the endpoints know who is making the request
+def get_current_user(token: str = Depends(oauth2_scheme), session: Session = Depends(get_session)):
+    credentials_exception = HTTPException(
+        status_code=401,
+        detail="Could not validate credentials",
+        headers={'WWW-Authenticate':'Bearer'}
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get('sub')
+        if username is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    
+    # Find user in database
+    user = session.exec(select(User).where(User.username == username)).first()
+    if user is None:
+        raise credentials_exception
+    return user
+
+
 # Handle request endpoint
 class ScrobbleRequest(SQLModel):
     title: str
     artist: str
     package: str
-    timestamp: int    
+    timestamp: int
+
+# Handle signup requests
+class UserCreate(SQLModel):
+    username: str
+    password: str
+
+@app.post('/register')
+def register_user(user: UserCreate, session: Session = Depends(get_session)):
+    # Check if username exists
+    existing = session.exec(select(User).where(User.username == user.username)).first()
+    if existing:
+        raise HTTPException(status_code=400, detail='Username already taken')
+
+    # Hash password and save to database
+    hashed_pwd = get_password_hash(user.password)
+    new_user = User(username=user.username, hashed_password=hashed_pwd)    
+    session.add(new_user)
+    session.commit()
+    return {'message': 'User created successfully'}
+
+@app.post('/token')
+def login_for_access_token(form_data: OAuth2PasswordRequestForm= Depends(), session: Session = Depends(get_session)):
+    # Find user
+    user = session.exec(select(User).where(User.username == form_data.username)).first()
+
+    if not user or not verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(status_code=401, detail='Incorrect username or password')
+    
+    access_token = create_access_token(data={'sub': user.username})
+    return {'access_token': access_token, 'token_type': 'bearer'}
 
 # Create POST endpoint (reciever)
 @app.post("/scrobble")
-async def receive_scrobble(req: Scrobble, session: Session = Depends(get_session)): # Dependancy Injection
+async def receive_scrobble(
+    req: Scrobble, 
+    session: Session = Depends(get_session),
+    user: User = Depends(get_current_user)
+): # Dependancy Injection
     print(f"Recieved: {req.title} by {req.artist}")
 
     spotify_data = enrich_data(req.title, req.artist)
 
     new_scrobble = Scrobble(
+        user_id=user.id,
         title=req.title,
         artist=req.artist,
         package=req.package,
@@ -156,9 +252,10 @@ async def receive_scrobble(req: Scrobble, session: Session = Depends(get_session
 @app.get("/history")
 def read_history(
     limit: Optional[int] = None,
-    session: Session = Depends(get_session)
-    ):
-    query = select(Scrobble).order_by(Scrobble.id.desc())
+    session: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
+):
+    query = select(Scrobble).where(Scrobble.user_id == user.id).order_by(Scrobble.id.desc())
 
     if limit:
         subquery = (
@@ -178,7 +275,7 @@ def read_history(
 
 # Get the track album image
 @app.get('/track/image')
-def get_track_image(title: str, artist: str):
+def get_track_image(title: str, artist: str, user: User = Depends(get_current_user)):
     data = enrich_data(title, artist)
 
     if data and 'image_url' in data:
@@ -199,7 +296,7 @@ def apply_date_filter(query, month: Optional[int], year: Optional[int]):
     return query
 
 @app.get("/stats/today")
-def get_today_stats(session: Session = Depends(get_session)):
+def get_today_stats(session: Session = Depends(get_session), user: User = Depends(get_current_user)):
     # Get start of the day
     now = datetime.now(timezone.utc)
     start_of_day = datetime(now.year, now.month, now.day, tzinfo=timezone.utc) # 00:00:00 of today
@@ -207,18 +304,21 @@ def get_today_stats(session: Session = Depends(get_session)):
     # Get Total Plays
     total_plays = session.exec(
         select(func.count(Scrobble.id))
+        .where(Scrobble.user_id == user.id)
         .where(Scrobble.created_at >= start_of_day)
     ).one()
 
     # Get total minutes listened
     total_ms = session.exec(
        select(func.sum(Scrobble.duration_ms))
+       .where(Scrobble.user_id == user.id)
        .where(Scrobble.created_at >= start_of_day) 
     ).one()
     total_mins = int((total_ms or 0) / 60000)
 
     artist_query = (
         select(Scrobble.artist, Scrobble.artist_image, func.count(Scrobble.id).label('count'))
+        .where(Scrobble.user_id == user.id)
         .where(Scrobble.created_at >= start_of_day)
         .group_by(Scrobble.artist, Scrobble.artist_image)
         .order_by(func.count(Scrobble.id).desc())
@@ -248,7 +348,8 @@ def get_top_songs(
     month: Optional[int] = None,
     year: Optional[int] = None,
     limit: int = 5,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
     ):
     # Select title, artist, image_url, count(id) as plays from Scrobble 
     # group by title, artist, img_url
@@ -256,6 +357,7 @@ def get_top_songs(
     # limit 5
     query = (
         select(Scrobble.title, Scrobble.artist, Scrobble.image_url, func.count(Scrobble.id).label("plays"))
+        .where(Scrobble.user_id == user.id)
         .group_by(Scrobble.title, Scrobble.artist, Scrobble.image_url)
         .order_by(func.count(Scrobble.id).desc())
         .limit(limit)
@@ -278,10 +380,12 @@ def get_top_artists(
     month: Optional[int] = None,
     year: Optional[int] = None,
     limit: int = 5,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
     ):
     query = (
         select(Scrobble.artist, Scrobble.artist_image, func.count(Scrobble.id).label("plays"))
+        .where(Scrobble.user_id == user.id)
         .group_by(Scrobble.artist)
         .order_by(func.count(Scrobble.id).desc())
         .limit(limit)
@@ -300,16 +404,17 @@ def get_top_artists(
 def get_total_stats(
     month: Optional[int] = None,
     year: Optional[int] = None,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
     ):
 
     # Total plays
-    query = select(func.count(Scrobble.id))
+    query = select(func.count(Scrobble.id)).where(Scrobble.user_id == user.id)
     query = apply_date_filter(query, month, year)
     total_plays = session.exec(query).one()
 
     # Total minutes
-    query = select(func.sum(Scrobble.duration_ms))
+    query = select(func.sum(Scrobble.duration_ms)).where(Scrobble.user_id == user.id)
     query = apply_date_filter(query, month, year)
     total_ms = session.exec(query).one()
     if total_ms is None:
@@ -329,13 +434,14 @@ def get_total_stats(
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 @app.get("/recommend/vibes")
-def get_vibe_recommendations(session: Session = Depends(get_session)):
+def get_vibe_recommendations(session: Session = Depends(get_session), user: User = Depends(get_current_user),):
     # Get current month and year
     now = datetime.now(timezone.utc)
 
     # get top 5 songs
     query = (
         select(Scrobble.title, Scrobble.artist)
+        .where(Scrobble.user_id == user.id)
         .group_by(Scrobble.title, Scrobble.artist)
         .order_by(func.count(Scrobble.id).desc())
         .limit(5)
@@ -377,7 +483,7 @@ def get_vibe_recommendations(session: Session = Depends(get_session)):
     print(f'Song details not found in cache')
         
     # Create a user history blocklist (To prevent recommending songs user has already listened to)
-    history_query = select(Scrobble.title, Scrobble.artist).distinct()
+    history_query = select(Scrobble.title, Scrobble.artist).where(Scrobble.user_id == user.id).distinct()
     history_rows = session.exec(history_query).all()
 
     # Create a set of tuples of history
@@ -469,11 +575,12 @@ genius.remove_section_headers = True # Remove headers ([Chorus] [Verse])
 genius.verbose = False # Turn off status messages
 
 @app.get("/recommend/lyrics")
-def get_lyrical_recommendations(session: Session = Depends(get_session)):
+def get_lyrical_recommendations(session: Session = Depends(get_session), user: User = Depends(get_current_user),):
     now = datetime.now(timezone.utc)
     # get top 5 songs
     query = (
         select(Scrobble.title, Scrobble.artist)
+        .where(Scrobble.user_id == user.id)
         .group_by(Scrobble.title, Scrobble.artist)
         .order_by(func.count(Scrobble.id).desc())
         .limit(5)
@@ -515,7 +622,7 @@ def get_lyrical_recommendations(session: Session = Depends(get_session)):
     print(f'Song details not found in cache')
         
     # Create a user history blocklist (To prevent recommending songs user has already listened to)
-    history_query = select(Scrobble.title, Scrobble.artist).distinct()
+    history_query = select(Scrobble.title, Scrobble.artist).where(Scrobble.user_id == user.id).distinct()
     history_rows = session.exec(history_query).all()
 
     # Create a set of tuples of history
@@ -624,10 +731,10 @@ def get_lyrical_recommendations(session: Session = Depends(get_session)):
 
 # Recommendation engine => Recommend songs by same producers/songwriters
 @app.get('/recommend/credits')
-def get_credits_recommendations(session: Session = Depends(get_session)):
+def get_credits_recommendations(session: Session = Depends(get_session), user: User = Depends(get_current_user),):
 
     # Create a user history blocklist (To prevent recommending songs user has already listened to)
-    history_query = select(Scrobble.title, Scrobble.artist).distinct()
+    history_query = select(Scrobble.title, Scrobble.artist).where(Scrobble.user_id == user.id).distinct()
     history_rows = session.exec(history_query).all()
 
     # Create a set of tuples of history
@@ -638,6 +745,7 @@ def get_credits_recommendations(session: Session = Depends(get_session)):
     # get top 5 songs
     query = (
         select(Scrobble.title, Scrobble.artist)
+        .where(Scrobble.user_id == user.id)
         .group_by(Scrobble.title, Scrobble.artist)
         .order_by(func.count(Scrobble.id).desc())
         .limit(5)
@@ -871,9 +979,9 @@ def get_ai_credit_recs(title, artist):
 
 # Recommendation engine => Recommend new artists based on user's top genres
 @app.get('/recommend/artists')
-def get_artist_recommendations(session: Session = Depends(get_session)):
+def get_artist_recommendations(session: Session = Depends(get_session), user: User = Depends(get_current_user),):
     # Get all genres from database (genres stored in string format eg "pop, rock")
-    genre_history = session.exec(select(Scrobble.genres)).all()
+    genre_history = session.exec(select(Scrobble.genres).where(Scrobble.user_id == user.id)).all()
 
     if not genre_history:
         return [{'title': 'No data', 'artist': '-', 'reason': 'No history'}]
@@ -897,7 +1005,7 @@ def get_artist_recommendations(session: Session = Depends(get_session)):
     
 
     # Build artist blocklist (Already known artists)
-    query = select(Scrobble.artist).distinct()
+    query = select(Scrobble.artist).where(Scrobble.user_id == user.id).distinct()
     known_artists = [a.lower() for a in session.exec(query).all()]
 
     # Dictionary to store candidate artists {artist_id: artist_object}
@@ -1014,11 +1122,12 @@ def get_artist_recommendations(session: Session = Depends(get_session)):
 
 # Recommendation engine => Recommend songs sampled from/sampled in users top songs
 @app.get('/recommend/samples')
-def get_sample_recommendations(session: Session = Depends(get_session)):
+def get_sample_recommendations(session: Session = Depends(get_session), user: User = Depends(get_current_user),):
     now = datetime.now(timezone.utc)
     # get top 20 songs
     query = (
         select(Scrobble.title, Scrobble.artist)
+        .where(Scrobble.user_id == user.id)
         .group_by(Scrobble.title, Scrobble.artist)
         .order_by(func.count(Scrobble.id).desc())
         .limit(30)

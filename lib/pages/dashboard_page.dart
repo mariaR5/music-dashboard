@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:scrobbler/models/stats_model.dart';
 import 'package:scrobbler/pages/top_items_page.dart';
+import 'package:scrobbler/services/auth_service.dart';
 import 'package:scrobbler/widgets/stat_card.dart';
 import 'package:scrobbler/widgets/stats_list.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -44,15 +45,20 @@ class _DashboardPageState extends State<DashboardPage> {
     }
 
     try {
+      final token = await AuthService.getToken();
+
       // Fetch data from server
       final resTotal = await http.get(
         Uri.parse("$baseUrl/stats/total$queryParams"),
+        headers: {"Authorization": "Bearer $token"},
       );
       final resSongs = await http.get(
         Uri.parse("$baseUrl/stats/top-songs$queryParams"),
+        headers: {"Authorization": "Bearer $token"},
       );
       final resArtists = await http.get(
         Uri.parse("$baseUrl/stats/top-artists$queryParams"),
+        headers: {"Authorization": "Bearer $token"},
       );
 
       if (resTotal.statusCode == 200 &&

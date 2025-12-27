@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:scrobbler/models/stats_model.dart';
+import 'package:scrobbler/services/auth_service.dart';
 import 'package:scrobbler/widgets/stats_list.dart';
 
 class TopItemsPage extends StatefulWidget {
@@ -45,8 +46,11 @@ class _TopItemsPageState extends State<TopItemsPage> {
     final endpoint = widget.type == 'songs' ? 'top-songs' : 'top-artists';
 
     try {
+      final token = await AuthService.getToken();
+
       final response = await http.get(
         Uri.parse("$baseUrl/stats/$endpoint$queryParams"),
+        headers: {"Authorization": "Bearer $token"},
       );
 
       if (response.statusCode == 200) {

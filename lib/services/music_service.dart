@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:scrobbler/models/scrobble.dart';
+import 'package:scrobbler/services/auth_service.dart';
 
 import '../models/daily_stats.dart';
 
@@ -14,10 +15,15 @@ class MusicService {
     if (title == 'No song detected' || title.isEmpty) return null;
 
     try {
+      final token = await AuthService.getToken();
+
       final uri = Uri.parse(
         '$baseUrl/track/image',
       ).replace(queryParameters: {'title': title, 'artist': artist});
-      final response = await http.get(uri);
+      final response = await http.get(
+        uri,
+        headers: {"Authorization": "Bearer $token"},
+      );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -32,7 +38,11 @@ class MusicService {
   // Get 10 recently played songs
   Future<List<Scrobble>> getRecentlyPlayed() async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/history?limit=10'));
+      final token = await AuthService.getToken();
+      final response = await http.get(
+        Uri.parse('$baseUrl/history?limit=10'),
+        headers: {"Authorization": "Bearer $token"},
+      );
 
       if (response.statusCode == 200) {
         List<dynamic> body = jsonDecode(response.body);
@@ -49,7 +59,11 @@ class MusicService {
   // Get today stats
   Future<DailyStats> getTodayStats() async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/stats/today'));
+      final token = await AuthService.getToken();
+      final response = await http.get(
+        Uri.parse('$baseUrl/stats/today'),
+        headers: {"Authorization": "Bearer $token"},
+      );
 
       if (response.statusCode == 200) {
         return DailyStats.fromJson(jsonDecode(response.body));
