@@ -53,7 +53,7 @@ engine = create_engine(sqllite_url)
 class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     username: str = Field(index=True, unique=True)
-    hashed_password = str
+    hashed_password:  str
 
 
 # SCROBBLE TABLE
@@ -206,8 +206,9 @@ def register_user(user: UserCreate, session: Session = Depends(get_session)):
     session.commit()
     return {'message': 'User created successfully'}
 
+
 @app.post('/token')
-def login_for_access_token(form_data: OAuth2PasswordRequestForm= Depends(), session: Session = Depends(get_session)):
+def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), session: Session = Depends(get_session)):
     # Find user
     user = session.exec(select(User).where(User.username == form_data.username)).first()
 
@@ -216,6 +217,7 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm= Depends(), sess
     
     access_token = create_access_token(data={'sub': user.username})
     return {'access_token': access_token, 'token_type': 'bearer'}
+
 
 # Create POST endpoint (reciever)
 @app.post("/scrobble")

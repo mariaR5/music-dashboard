@@ -9,6 +9,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_notification_listener/flutter_notification_listener.dart';
 import 'package:scrobbler/pages/dashboard_page.dart';
 import 'package:scrobbler/pages/home_page.dart';
+import 'package:scrobbler/pages/login_page.dart';
 import 'package:scrobbler/pages/recommendation_page.dart';
 import 'package:scrobbler/services/auth_service.dart';
 import 'package:scrobbler/widgets/custom_navbar.dart';
@@ -130,12 +131,15 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
 
+  final token = await AuthService.getToken();
+  final isLoggedIn = token != null;
+
   runApp(
     MaterialApp(
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: const Color(0xFF1A1A1A),
       ),
-      home: ScrobblerHome(),
+      home: isLoggedIn ? const ScrobblerHome() : const LoginPage(),
     ),
   );
 }

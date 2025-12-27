@@ -59,6 +59,7 @@ backend/.env
 # SQLite DB
 music.db
 backend/music.db
+music_backup.db
 
 # Cache
 .cache/
