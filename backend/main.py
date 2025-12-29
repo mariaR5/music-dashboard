@@ -13,7 +13,7 @@ from typing import Optional, List
 from datetime import datetime, timezone, timedelta
 from collections import Counter
 
-from passlib.context import CryptContext
+import bcrypt
 from jose import jwt, JWTError
 
 import spotipy
@@ -29,9 +29,6 @@ load_dotenv()
 SECRET_KEY = os.getenv('JWT_SECRET_KEY')
 ALGORITHM = 'HS256'
 ACCESS_TOKEN_EXPIRY_MINUTES = 30000
-
-# Password hasing wrapper
-pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
 
 # Method to extract token
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl = 'token')
@@ -140,12 +137,24 @@ def get_session():
         yield session
 
 # Verify password
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    # Convert strings to bytes
+    pwd_bytes = plain_password.encode('utf-8')
+    hash_pwd_bytes = hashed_password.encode('utf-8')
+    
+    return bcrypt.checkpw(pwd_bytes, hash_pwd_bytes)
 
 # Hash password
-def get_password_hash(password):
-    return pwd_context.hash(password)
+def get_password_hash(password: str) -> str:
+    # Convert string pwd to bytes
+    pwd_bytes = password.encode('utf-8')
+    
+    # Generate a salt and hash the password
+    salt = bcrypt.gensalt()
+    hashed_password = bcrypt.hashpw(pwd_bytes, salt)
+
+    # Convert bytes to string
+    return hashed_password.decode('utf-8')
 
 # Create JWT access token -> header.payload.signature
 def create_access_token(data: dict):
