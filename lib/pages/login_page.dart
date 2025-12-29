@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:scrobbler/main.dart';
+import 'package:scrobbler/pages/register_page.dart';
 import 'package:scrobbler/services/auth_service.dart';
 
 class LoginPage extends StatefulWidget {
@@ -123,7 +124,12 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
             TextButton(
-              onPressed: () {},
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const RegisterPage()),
+                );
+              },
               child: const Text(
                 'Create Account',
                 style: TextStyle(color: Colors.grey),
