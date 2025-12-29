@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:scrobbler/models/daily_stats.dart';
 import 'package:scrobbler/models/scrobble.dart';
+import 'package:scrobbler/pages/profile_page.dart';
 import 'package:scrobbler/services/music_service.dart';
 import 'package:scrobbler/widgets/artist_card.dart';
 import 'package:scrobbler/widgets/now_playing.dart';
@@ -116,10 +117,20 @@ class _HomePageState extends State<HomePage> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      CircleAvatar(
-                        radius: 25,
-                        backgroundColor: const Color(0xFF3B3B3B),
-                        child: Icon(Icons.person, color: Colors.white),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const ProfilePage(),
+                            ),
+                          );
+                        },
+                        child: CircleAvatar(
+                          radius: 25,
+                          backgroundColor: const Color(0xFF3B3B3B),
+                          child: Icon(Icons.person, color: Colors.white),
+                        ),
                       ),
 
                       StatusCard(
