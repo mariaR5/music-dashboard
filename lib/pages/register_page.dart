@@ -80,6 +80,9 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
+    const sageGreen = Color(0xFF697565);
+    const greyAccent = Color(0xFF3B3B3B);
+
     return Scaffold(
       backgroundColor: const Color(0xFF1A1A1A),
       appBar: AppBar(
@@ -95,6 +98,7 @@ class _RegisterPageState extends State<RegisterPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              const SizedBox(height: 80),
               const Text(
                 'Create Account',
                 style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
@@ -109,11 +113,23 @@ class _RegisterPageState extends State<RegisterPage> {
               // Username
               TextField(
                 controller: _usernameController,
+                cursorColor: Colors.grey,
                 decoration: InputDecoration(
-                  labelText: 'Username',
-                  labelStyle: const TextStyle(color: Colors.white),
+                  labelText: "Username",
+                  floatingLabelStyle: TextStyle(color: Colors.white),
                   filled: true,
-                  fillColor: Colors.grey,
+                  fillColor: greyAccent,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: sageGreen),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: sageGreen),
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
@@ -121,12 +137,24 @@ class _RegisterPageState extends State<RegisterPage> {
               // Password
               TextField(
                 controller: _passwordController,
+                cursorColor: Colors.grey,
                 obscureText: true,
                 decoration: InputDecoration(
-                  labelText: 'Password',
-                  labelStyle: const TextStyle(color: Colors.white),
+                  labelText: "Password",
+                  floatingLabelStyle: TextStyle(color: Colors.white),
                   filled: true,
-                  fillColor: Colors.grey,
+                  fillColor: greyAccent,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: sageGreen),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: sageGreen),
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
@@ -134,12 +162,24 @@ class _RegisterPageState extends State<RegisterPage> {
               // Confirm password
               TextField(
                 controller: _confirmController,
+                cursorColor: Colors.grey,
                 obscureText: true,
                 decoration: InputDecoration(
-                  labelText: 'Confirm Password',
-                  labelStyle: const TextStyle(color: Colors.white),
+                  labelText: "Confirm Password",
+                  floatingLabelStyle: TextStyle(color: Colors.white),
                   filled: true,
-                  fillColor: Colors.grey,
+                  fillColor: greyAccent,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: sageGreen),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: sageGreen),
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
@@ -155,15 +195,16 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
 
               // Register button
+              const SizedBox(height: 24),
               SizedBox(
-                width: double.infinity,
-                height: 55,
+                width: 140,
+                height: 50,
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _register,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF697565),
+                    backgroundColor: sageGreen,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadiusGeometry.circular(12),
+                      borderRadius: BorderRadiusGeometry.circular(20),
                     ),
                   ),
                   child: _isLoading
@@ -174,11 +215,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         )
                       : const Text(
                           'Sign Up',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: TextStyle(color: Colors.white, fontSize: 18),
                         ),
                 ),
               ),
