@@ -6,6 +6,7 @@ import requests
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
 
 from sqlmodel import SQLModel, Session, create_engine, Field, select
 from sqlalchemy import func, extract
@@ -33,6 +34,19 @@ ACCESS_TOKEN_EXPIRY_MINUTES = 30000
 # Method to extract token
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl = 'token')
 
+# Email config
+conf = ConnectionConfig(
+    MAIL_USERNAME=os.getenv('MAIL_USERNAME'),
+    MAIL_PASSWORD=os.getenv('MAIL_PASSWORD'),
+    MAIL_FROM=os.getenv('MAIL_USERNAME'),
+    MAIL_PORT=587,
+    MAIL_SERVER=os.getenv('MAIL_SERVER'),
+    MAIL_STARTTLS=True,
+    MAIL_SSL_TLS=False,
+    USE_CREDENTIALS=True,
+    VALIDATE_CERTS=True
+)
+
 # Create spotify client
 sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
     client_id= os.getenv("SPOTIPY_CLIENT_ID"),
@@ -50,7 +64,13 @@ engine = create_engine(sqllite_url)
 class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     username: str = Field(index=True, unique=True)
+    email: str = Field(index=True, unique=True)
     hashed_password:  str
+
+    # Verification fields
+    is_verified: bool = Field(default=False)
+    otp_code: Optional[str] = None
+    otp_expiry: Optional[datetime] = None
 
 
 # SCROBBLE TABLE
@@ -189,6 +209,28 @@ def get_current_user(token: str = Depends(oauth2_scheme), session: Session = Dep
     return user
 
 
+async def send_otp_email(email: str, otp: str, subject: str = 'Your Verification Code'):
+    html = f"""
+    <div style="font-family: Arial, sans-serif; padding: 20px">
+    <h2>Universal Scrobbler Security</h2>
+    <p>Your One-Time Password (OTP) is :</p>
+    <h1 style="color: #697565; letter-spacing: 5px;">{otp}</h1>
+    <p>This code expires in 10 minutes</p>
+    <p>If you did not request this, please ignore this email.</p>
+    </div>
+    """
+
+    message = MessageSchema(
+        subject=subject,
+        recipients=[email],
+        body=html,
+        subtype=MessageType.html
+    )
+
+    fm = FastMail(conf)
+    await fm.send_message(message)
+
+
 # Handle request endpoint
 class ScrobbleRequest(SQLModel):
     title: str
@@ -199,21 +241,70 @@ class ScrobbleRequest(SQLModel):
 # Handle signup requests
 class UserCreate(SQLModel):
     username: str
+    email: str
     password: str
 
 @app.post('/register')
-def register_user(user: UserCreate, session: Session = Depends(get_session)):
+async def register_user(user: UserCreate, session: Session = Depends(get_session)):
     # Check if username exists
-    existing = session.exec(select(User).where(User.username == user.username)).first()
+    existing = session.exec(select(User).where((User.username == user.username) | (User.email == user.email))).first()
+
     if existing:
-        raise HTTPException(status_code=400, detail='Username already taken')
+        raise HTTPException(status_code=400, detail='Username or email already taken')
+    
+    otp = str(random.randint(100000, 999999))
+    otp_exp = datetime.now(timezone.utc) + timedelta(minutes=10)
 
     # Hash password and save to database
     hashed_pwd = get_password_hash(user.password)
-    new_user = User(username=user.username, hashed_password=hashed_pwd)    
+    new_user = User(
+        username=user.username, 
+        email=user.email,
+        hashed_password=hashed_pwd,
+        otp_code=otp,
+        otp_expiry=otp_exp,
+        is_verified=False
+    )    
+
     session.add(new_user)
     session.commit()
-    return {'message': 'User created successfully'}
+
+    try:
+        await send_otp_email(user.email, otp)
+    except Exception as e:
+        print(f"Email failed: {e}")
+
+    return {'message': 'Account created. Please verify your email', 'email': user.email}
+
+class VerifyRequest(SQLModel):
+    email: str
+    otp: str
+
+@app.post('/verify-email')
+def verify_email(req: VerifyRequest, session: Session = Depends(get_session)):
+    user = session.exec(select(User).where(User.email == req.email)).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail='User not found')
+    
+    if user.is_verified:
+        return {'message': 'User already verified'}
+    
+    now = datetime.now(timezone.utc)
+
+    if user.otp_expiry.tzinfo is None:
+        user.otp_expiry = user.otp_expiry.replace(tzinfo=timezone.utc)
+
+    if user.otp_code != req.otp or now > user.otp_expiry:
+        raise HTTPException(status_code=400, detail='Invalid or expired otp')
+    
+
+    user.is_verified = True
+    user.otp_code = None # Clear OTP
+    session.add(user)
+    session.commit()
+
+    return {'message': 'Email verified successfully. You can now login'}
 
 
 @app.post('/token')
@@ -226,6 +317,7 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), ses
     
     access_token = create_access_token(data={'sub': user.username})
     return {'access_token': access_token, 'token_type': 'bearer'}
+
 
 @app.get('/users/me')
 def read_users_me(user: User = Depends(get_current_user)):

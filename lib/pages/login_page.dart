@@ -38,7 +38,7 @@ class _LoginPageState extends State<LoginPage> {
       }
       final response = await http.post(
         Uri.parse('$baseUrl/token'),
-        headers: {'Content-type': 'application/x-www-form-urlencoded'},
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
         body: {
           'username': _usernameController.text,
           'password': _passwordController.text,

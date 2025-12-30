@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
+import 'package:scrobbler/pages/verify_page.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -13,6 +14,7 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmController = TextEditingController();
 
@@ -20,7 +22,9 @@ class _RegisterPageState extends State<RegisterPage> {
   String? _errorMessage;
 
   Future<void> _register() async {
-    if (_usernameController.text.isEmpty || _passwordController.text.isEmpty) {
+    if (_usernameController.text.isEmpty ||
+        _passwordController.text.isEmpty ||
+        _emailController.text.isEmpty) {
       setState(() {
         _errorMessage = 'Please fill in all the fields';
       });
@@ -47,19 +51,19 @@ class _RegisterPageState extends State<RegisterPage> {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'username': _usernameController.text,
+          'email': _emailController.text,
           'password': _passwordController.text,
         }),
       );
 
       if (response.statusCode == 200) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Account created! Please login'),
-              backgroundColor: Colors.grey,
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => VerifyPage(email: _emailController.text),
             ),
           );
-          Navigator.pop(context);
         }
       } else {
         final errorData = jsonDecode(response.body);
@@ -116,6 +120,30 @@ class _RegisterPageState extends State<RegisterPage> {
                 cursorColor: Colors.grey,
                 decoration: InputDecoration(
                   labelText: "Username",
+                  floatingLabelStyle: TextStyle(color: Colors.white),
+                  filled: true,
+                  fillColor: greyAccent,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: sageGreen),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: sageGreen),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Email
+              TextField(
+                controller: _emailController,
+                cursorColor: Colors.grey,
+                decoration: InputDecoration(
+                  labelText: "Email Address",
                   floatingLabelStyle: TextStyle(color: Colors.white),
                   filled: true,
                   fillColor: greyAccent,
