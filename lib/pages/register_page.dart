@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:scrobbler/pages/verify_page.dart';
+import 'package:scrobbler/widgets/form_fields.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -115,100 +116,32 @@ class _RegisterPageState extends State<RegisterPage> {
               const SizedBox(height: 40),
 
               // Username
-              TextField(
-                controller: _usernameController,
-                cursorColor: Colors.grey,
-                decoration: InputDecoration(
-                  labelText: "Username",
-                  floatingLabelStyle: TextStyle(color: Colors.white),
-                  filled: true,
-                  fillColor: greyAccent,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: sageGreen),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: sageGreen),
-                  ),
-                ),
+              BuildTextField(
+                fieldController: _usernameController,
+                label: 'Username',
               ),
               const SizedBox(height: 20),
 
               // Email
-              TextField(
-                controller: _emailController,
-                cursorColor: Colors.grey,
-                decoration: InputDecoration(
-                  labelText: "Email Address",
-                  floatingLabelStyle: TextStyle(color: Colors.white),
-                  filled: true,
-                  fillColor: greyAccent,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: sageGreen),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: sageGreen),
-                  ),
-                ),
+              BuildTextField(
+                fieldController: _emailController,
+                label: 'Email Address',
               ),
               const SizedBox(height: 20),
 
               // Password
-              TextField(
-                controller: _passwordController,
-                cursorColor: Colors.grey,
-                obscureText: true,
-                decoration: InputDecoration(
-                  labelText: "Password",
-                  floatingLabelStyle: TextStyle(color: Colors.white),
-                  filled: true,
-                  fillColor: greyAccent,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: sageGreen),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: sageGreen),
-                  ),
-                ),
+              BuildTextField(
+                fieldController: _passwordController,
+                label: 'Password',
+                isPassword: true,
               ),
               const SizedBox(height: 20),
 
               // Confirm password
-              TextField(
-                controller: _confirmController,
-                cursorColor: Colors.grey,
-                obscureText: true,
-                decoration: InputDecoration(
-                  labelText: "Confirm Password",
-                  floatingLabelStyle: TextStyle(color: Colors.white),
-                  filled: true,
-                  fillColor: greyAccent,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: sageGreen),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: sageGreen),
-                  ),
-                ),
+              BuildTextField(
+                fieldController: _confirmController,
+                label: 'Confirm Password',
+                isPassword: true,
               ),
               const SizedBox(height: 20),
 
@@ -224,28 +157,10 @@ class _RegisterPageState extends State<RegisterPage> {
 
               // Register button
               const SizedBox(height: 24),
-              SizedBox(
-                width: 140,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _register,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: sageGreen,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadiusGeometry.circular(20),
-                    ),
-                  ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(),
-                        )
-                      : const Text(
-                          'Sign Up',
-                          style: TextStyle(color: Colors.white, fontSize: 18),
-                        ),
-                ),
+              SubmitButton(
+                isLoading: _isLoading,
+                label: 'Sign Up',
+                onTap: _register,
               ),
             ],
           ),

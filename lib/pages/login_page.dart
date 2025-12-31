@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:scrobbler/main.dart';
 import 'package:scrobbler/pages/register_page.dart';
 import 'package:scrobbler/services/auth_service.dart';
+import 'package:scrobbler/widgets/form_fields.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -76,7 +77,6 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     const sageGreen = Color(0xFF697565);
-    const greyAccent = Color(0xFF3B3B3B);
 
     return Scaffold(
       body: SingleChildScrollView(
@@ -95,49 +95,15 @@ class _LoginPageState extends State<LoginPage> {
                     style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 50),
-                  TextField(
-                    controller: _usernameController,
-                    cursorColor: Colors.grey,
-                    decoration: InputDecoration(
-                      labelText: "Username",
-                      floatingLabelStyle: TextStyle(color: Colors.white),
-                      filled: true,
-                      fillColor: greyAccent,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: sageGreen),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: sageGreen),
-                      ),
-                    ),
+                  BuildTextField(
+                    fieldController: _usernameController,
+                    label: 'Username',
                   ),
                   const SizedBox(height: 16),
-                  TextField(
-                    controller: _passwordController,
-                    cursorColor: Colors.grey,
-                    obscureText: true,
-                    decoration: InputDecoration(
-                      labelText: "Password",
-                      floatingLabelStyle: TextStyle(color: Colors.white),
-                      filled: true,
-                      fillColor: greyAccent,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: sageGreen),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: sageGreen),
-                      ),
-                    ),
+                  BuildTextField(
+                    fieldController: _passwordController,
+                    label: 'Password',
+                    isPassword: true,
                   ),
                   const SizedBox(height: 24),
                   if (_errorMessage != null)
@@ -146,27 +112,10 @@ class _LoginPageState extends State<LoginPage> {
                       style: const TextStyle(color: Colors.red),
                     ),
                   const SizedBox(height: 24),
-                  SizedBox(
-                    width: 140,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _login,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: sageGreen,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadiusGeometry.circular(20),
-                        ),
-                      ),
-                      child: _isLoading
-                          ? const CircularProgressIndicator()
-                          : const Text(
-                              'Sign In',
-                              style: TextStyle(
-                                fontSize: 18,
-                                color: Colors.white,
-                              ),
-                            ),
-                    ),
+                  SubmitButton(
+                    isLoading: _isLoading,
+                    label: 'Sign In',
+                    onTap: _login,
                   ),
                   const SizedBox(height: 8),
                   Row(
