@@ -73,6 +73,7 @@ class User(SQLModel, table=True):
     otp_expiry: Optional[datetime] = None
 
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    rec_period: int = Field(default=1) 
 
 
 # SCROBBLE TABLE
@@ -373,6 +374,16 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), ses
 def read_users_me(user: User = Depends(get_current_user)):
     return user
 
+class PreferenceUpdate(SQLModel):
+    rec_period: int
+
+@app.put('/users/preferences')
+def update_preferences(pref: PreferenceUpdate, session: Session = Depends(get_session), user: User = Depends(get_current_user)):
+    user.rec_period = pref.rec_period
+    session.add(user)
+    session.commit()
+    return {'message': 'Preference updated', 'rec-period': user.rec_period}
+
 
 # Create POST endpoint (reciever)
 @app.post("/scrobble")
@@ -603,30 +614,40 @@ def get_total_stats(
 
 #=================================RECOMMENDATIONS===========================================
 
+def get_user_top_tracks(session: Session, user: User, limit: int = 5):
+    now = datetime.now(timezone.utc)
+    start_date = None
+
+    # If period is only present month, start date is 1st of this month
+    if user.rec_period == 0:
+        start_date = datetime(now.year, now.month, 1, tzinfo=timezone.utc)
+    # Else start date is X months ago
+    else:
+        start_date = now - timedelta(days=user.rec_period * 30)
+
+    print(f"Filtering recommendations from: {start_date}")
+
+    query = (
+        select(Scrobble.title, Scrobble.artist)
+        .where(Scrobble.user_id == user.id)
+        .where(Scrobble.created_at >= start_date)
+        .group_by(Scrobble.title, Scrobble.artist)
+        .order_by(func.count(Scrobble.id).desc())
+        .limit(limit)
+    )
+
+    return session.exec(query).all()
+
 # Recommendation engine => Recommend songs with the same flow and vibe as one of the top 5 songs
 
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 @app.get("/recommend/vibes")
 def get_vibe_recommendations(session: Session = Depends(get_session), user: User = Depends(get_current_user),):
-    # Get current month and year
-    now = datetime.now(timezone.utc)
-
-    # get top 5 songs
-    query = (
-        select(Scrobble.title, Scrobble.artist)
-        .where(Scrobble.user_id == user.id)
-        .group_by(Scrobble.title, Scrobble.artist)
-        .order_by(func.count(Scrobble.id).desc())
-        .limit(5)
-    )
-    
-    # Apply date filter
-    query = apply_date_filter(query, month=now.month, year=now.year)
-    top_tracks = session.exec(query).all()
+    top_tracks = get_user_top_tracks(session, user, limit=5)
 
     if not top_tracks:
-        return {"message" : "Not enough data yet! Listen to more music."}
+        return [{"message" : "Not enough data yet! Listen to more music."}]
     
     # Choose a random song from top 5 songs
     seed_track = random.choice(top_tracks)
@@ -750,22 +771,10 @@ genius.verbose = False # Turn off status messages
 
 @app.get("/recommend/lyrics")
 def get_lyrical_recommendations(session: Session = Depends(get_session), user: User = Depends(get_current_user),):
-    now = datetime.now(timezone.utc)
-    # get top 5 songs
-    query = (
-        select(Scrobble.title, Scrobble.artist)
-        .where(Scrobble.user_id == user.id)
-        .group_by(Scrobble.title, Scrobble.artist)
-        .order_by(func.count(Scrobble.id).desc())
-        .limit(5)
-    )
-
-    # Apply date filter
-    query = apply_date_filter(query, month=now.month, year=now.year)
-    top_tracks = session.exec(query).all()
+    top_tracks = get_user_top_tracks(session, user, limit=5)
 
     if not top_tracks:
-        return {"message" : "Not enough data yet! Listen to more music."}
+        return [{"message" : "Not enough data yet! Listen to more music."}]
     
     # Choose a random song from top 5 songs
     seed_track = random.choice(top_tracks)
@@ -917,16 +926,7 @@ def get_credits_recommendations(session: Session = Depends(get_session), user: U
     now = datetime.now(timezone.utc)
     
     # get top 5 songs
-    query = (
-        select(Scrobble.title, Scrobble.artist)
-        .where(Scrobble.user_id == user.id)
-        .group_by(Scrobble.title, Scrobble.artist)
-        .order_by(func.count(Scrobble.id).desc())
-        .limit(5)
-    )
-    # Apply date filter
-    query = apply_date_filter(query, month=now.month, year=now.year)
-    top_tracks = session.exec(query).all()
+    top_tracks = get_user_top_tracks(session, user, limit=5)
 
     if not top_tracks:
         return [{"message" : "Not enough data yet! Listen to more music."}]
@@ -1311,7 +1311,7 @@ def get_sample_recommendations(session: Session = Depends(get_session), user: Us
     top_tracks = session.exec(query).all()
 
     if not top_tracks:
-        return {"message" : "Not enough data yet! Listen to more music."}
+        return [{"message" : "Not enough data yet! Listen to more music."}]
 
 
     recommendations = []

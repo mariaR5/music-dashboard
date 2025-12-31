@@ -21,10 +21,18 @@ class _ProfilePageState extends State<ProfilePage> {
   String _username = 'Loading...';
   String _email = '...';
   String _joinedDate = '...';
+  int _recPeriod = 1;
   bool _isLoading = true;
 
   final bgGrey = Color(0xFF1A1A1A);
   final sageGreen = Color(0xFF697565);
+
+  final Map<int, String> _periodLabels = {
+    0: 'Current Month Only',
+    1: 'Past 1 Month',
+    3: 'Past 3 Months',
+    6: 'Past 6 Months',
+  };
 
   @override
   void initState() {
@@ -66,6 +74,78 @@ class _ProfilePageState extends State<ProfilePage> {
         });
       }
     }
+  }
+
+  Future<void> _updateRecPeriod(int newValue) async {
+    setState(() {
+      _recPeriod = newValue;
+    });
+    Navigator.pop(context);
+
+    final String baseUrl = dotenv.env["API_BASE_URL"]!;
+    final token = await AuthService.getToken();
+
+    try {
+      await http.put(
+        Uri.parse('$baseUrl/users/preferences'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'rec_period': newValue}),
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Preferences Updated')));
+      }
+    } catch (e) {
+      _fetchProfile();
+    }
+  }
+
+  void _showRecPeriodSelector() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: bgGrey,
+        title: const Text(
+          'History Range',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Select time range for recommendations',
+              style: TextStyle(color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+            ..._periodLabels.entries.map((entry) {
+              return RadioListTile<int>(
+                title: Text(entry.value),
+                value: entry.key,
+                groupValue: _recPeriod,
+                dense: true,
+                onChanged: (val) {
+                  if (val != null) {
+                    _updateRecPeriod(val);
+                  }
+                },
+              );
+            }),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _showAllowedPackages() {
@@ -299,6 +379,13 @@ class _ProfilePageState extends State<ProfilePage> {
                           subtitle:
                               'Music listening platforms this app supports',
                           onTap: _showAllowedPackages,
+                        ),
+                        const Divider(height: 1, color: Colors.grey),
+                        MenuItem(
+                          title: 'Recommendation Timeframe',
+                          subtitle:
+                              'Set the listening history used for recommendations',
+                          onTap: _showRecPeriodSelector,
                         ),
                         const Divider(height: 1, color: Colors.grey),
                         MenuItem(
