@@ -85,9 +85,6 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
-    const sageGreen = Color(0xFF697565);
-    const greyAccent = Color(0xFF3B3B3B);
-
     return Scaffold(
       backgroundColor: const Color(0xFF1A1A1A),
       appBar: AppBar(

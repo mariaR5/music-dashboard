@@ -8,7 +8,7 @@ from fastapi import FastAPI, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
 
-from sqlmodel import SQLModel, Session, create_engine, Field, select
+from sqlmodel import SQLModel, Session, create_engine, Field, select, delete
 from sqlalchemy import func, extract
 from typing import Optional, List
 from datetime import datetime, timezone, timedelta
@@ -71,6 +71,8 @@ class User(SQLModel, table=True):
     is_verified: bool = Field(default=False)
     otp_code: Optional[str] = None
     otp_expiry: Optional[datetime] = None
+
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 # SCROBBLE TABLE
@@ -306,6 +308,54 @@ def verify_email(req: VerifyRequest, session: Session = Depends(get_session)):
 
     return {'message': 'Email verified successfully. You can now login'}
 
+class ForgotPasswordRequest(SQLModel):
+    email: str
+
+@app.post('/forgot-password')
+async def forgot_password(req: ForgotPasswordRequest, session: Session = Depends(get_session)):
+    user = session.exec(select(User).where(User.email == req.email)).first()
+
+    if not user:
+        return {'message': 'If that email exists, an OTP has been sent'}
+    
+    otp = str(random.randint(100000, 999999))
+    user.otp_code = otp
+    user.otp_expiry = datetime.now(timezone.utc) + timedelta(minutes=10)
+
+    session.add(user)
+    session.commit()
+
+    await send_otp_email(req.email, otp, subject='Reset Your Password')
+    return {'message': 'If that email exists, an OTP has been sent'}
+
+
+class ResetPasswordRequest(SQLModel):
+    email: str
+    otp: str
+    new_password: str
+
+@app.post('/reset-password')
+def reset_password(req: ResetPasswordRequest, session: Session = Depends(get_session)):
+    user = session.exec(select(User).where(User.email == req.email)).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail='User not found')
+    
+    now = datetime.now(timezone.utc)
+
+    if user.otp_expiry.tzinfo is None:
+        user.otp_expiry = user.otp_expiry.replace(tzinfo=timezone.utc)
+
+    if user.otp_code != req.otp or now > user.otp_expiry:
+        raise HTTPException(status_code=400, detail='Invalid or expired otp')
+    
+    user.hashed_password = get_password_hash(req.new_password)
+    user.otp_code = None
+    session.add(user)
+    session.commit()
+
+    return {'message': 'Password updated successfully. Please login'}
+
 
 @app.post('/token')
 def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), session: Session = Depends(get_session)):
@@ -390,6 +440,23 @@ def get_track_image(title: str, artist: str, user: User = Depends(get_current_us
     
     return {'image_url': None}
 
+
+#==================================DELETE==================================================
+@app.delete('/history/clear')
+def clear_history(user: User = Depends(get_current_user), session: Session = Depends(get_session)):
+    query = delete(Scrobble).where(Scrobble.user_id == user.id)
+    session.exec(query)
+    session.commit
+    return {'message': 'History cleared successfully'}
+
+
+@app.delete('/users/me/clear')
+def delete_account(user: User = Depends(get_current_user), session: Session = Depends(get_session)):
+    session.exec(delete(Scrobble).where(Scrobble.user_id == user.id))
+
+    session.delete(user)
+    session.commit
+    return {'message': 'Account deleted successfully'}
 
 #======================================STATS===================================================
 

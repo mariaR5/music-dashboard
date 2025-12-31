@@ -54,7 +54,7 @@ class SubmitButton extends StatefulWidget {
   final VoidCallback onTap;
   const SubmitButton({
     super.key,
-    required this.isLoading,
+    this.isLoading = false,
     required this.label,
     required this.onTap,
   });
@@ -69,7 +69,6 @@ class _SubmitButtonState extends State<SubmitButton> {
     const sageGreen = Color(0xFF697565);
 
     return SizedBox(
-      width: 140,
       height: 50,
       child: ElevatedButton(
         onPressed: widget.isLoading ? null : widget.onTap,

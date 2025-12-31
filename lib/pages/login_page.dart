@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:scrobbler/main.dart';
+import 'package:scrobbler/pages/forgot_password_page.dart';
 import 'package:scrobbler/pages/register_page.dart';
 import 'package:scrobbler/services/auth_service.dart';
 import 'package:scrobbler/widgets/form_fields.dart';
@@ -76,8 +77,6 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    const sageGreen = Color(0xFF697565);
-
     return Scaffold(
       body: SingleChildScrollView(
         child: ConstrainedBox(
@@ -105,7 +104,25 @@ class _LoginPageState extends State<LoginPage> {
                     label: 'Password',
                     isPassword: true,
                   ),
-                  const SizedBox(height: 24),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const ForgotPasswordEmailPage(),
+                          ),
+                        );
+                      },
+                      child: const Text(
+                        'Forgot Password?',
+                        style: TextStyle(color: Colors.white, fontSize: 14),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   if (_errorMessage != null)
                     Text(
                       _errorMessage!,

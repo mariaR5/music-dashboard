@@ -62,9 +62,6 @@ class _VerifyPageState extends State<VerifyPage> {
 
   @override
   Widget build(BuildContext context) {
-    const sageGreen = Color(0xFF697565);
-    const greyAccent = Color(0xFF3B3B3B);
-
     return Scaffold(
       body: SingleChildScrollView(
         child: ConstrainedBox(
