@@ -165,6 +165,9 @@ class _HomePageState extends State<HomePage> {
                         title: widget.currentTitle,
                         artist: widget.currentArtist,
                         imageUrl: _currentTrackImage,
+                        isAnimating:
+                            widget.isServiceRunning &&
+                            widget.currentTitle != 'No song detected',
                       ),
                       const SizedBox(height: 8),
                     ],
