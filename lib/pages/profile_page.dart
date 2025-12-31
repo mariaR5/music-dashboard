@@ -23,6 +23,9 @@ class _ProfilePageState extends State<ProfilePage> {
   String _joinedDate = '...';
   bool _isLoading = true;
 
+  final bgGrey = Color(0xFF1A1A1A);
+  final sageGreen = Color(0xFF697565);
+
   @override
   void initState() {
     super.initState();
@@ -63,6 +66,72 @@ class _ProfilePageState extends State<ProfilePage> {
         });
       }
     }
+  }
+
+  Future<void> _showAllowedPackages() {
+    Map<String, String> appNameMap = {
+      'com.spotify.music': 'Spotify',
+      'com.google.android.apps.youtube.music': 'YouTube Music',
+      'com.soundcloud.android': 'SoundCloud',
+      'com.apple.android.music': 'Apple Music',
+      'com.aspiro.tidal': 'TIDAL',
+      'deezer.android.app': 'Deezer',
+      'com.maxmpz.audioplayer': 'Poweramp',
+      'com.samsung.android.app.music': 'Samsung Music',
+      'com.sec.android.app.music': 'Samsung Music',
+      'com.miui.player': 'Mi Music',
+      'com.oppo.music': 'OPPO Music',
+      'com.oneplus.music': 'OnePlus Music',
+      'com.lge.music': 'LG Music',
+      'com.sony.walkman.music': 'Sony Walkman',
+    };
+    return showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: bgGrey,
+        title: const Text(
+          'Supported platforms',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: appNameMap.entries.map((entry) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        entry.value,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        entry.key,
+                        style: TextStyle(fontSize: 10, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 16),
+                      const Divider(height: 1, color: Colors.grey),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close', style: TextStyle(color: Colors.grey)),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _clearHistory() async {
@@ -114,6 +183,14 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _logout() async {
+    final confirmed = await _showConfirmationDialog(
+      title: 'Logout?',
+      content: 'Are you sure you want to log ou?',
+      confirmText: 'Log Out',
+    );
+
+    if (confirmed != true) return;
+
     await AuthService.logout();
 
     if (mounted) {
@@ -123,10 +200,6 @@ class _ProfilePageState extends State<ProfilePage> {
         (route) => false,
       );
     }
-  }
-
-  Future<void> openPermissionSettings() async {
-    await NotificationsListener.openPermissionSettings();
   }
 
   Future<bool?> _showConfirmationDialog({
@@ -139,6 +212,7 @@ class _ProfilePageState extends State<ProfilePage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(title, style: const TextStyle(color: Colors.white)),
+        backgroundColor: bgGrey,
         content: Text(content, style: TextStyle(color: Colors.grey)),
         actions: [
           TextButton(
@@ -149,9 +223,7 @@ class _ProfilePageState extends State<ProfilePage> {
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(
               confirmText,
-              style: TextStyle(
-                color: isDanger ? Colors.red : const Color(0xFF697565),
-              ),
+              style: TextStyle(color: isDanger ? Colors.red : Colors.white),
             ),
           ),
         ],
@@ -195,23 +267,23 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                         child: const Icon(Icons.person),
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 20),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             _username,
                             style: TextStyle(
-                              fontSize: 30,
+                              fontSize: 24,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           const SizedBox(height: 3),
-                          Text(_email, style: TextStyle(fontSize: 18)),
+                          Text(_email, style: TextStyle(fontSize: 16)),
                           const SizedBox(height: 3),
                           Text(
                             'Listening since $_joinedDate',
-                            style: TextStyle(fontSize: 16, color: Colors.grey),
+                            style: TextStyle(fontSize: 14, color: Colors.grey),
                           ),
                         ],
                       ),
@@ -221,6 +293,13 @@ class _ProfilePageState extends State<ProfilePage> {
                   Expanded(
                     child: ListView(
                       children: [
+                        const Divider(height: 1, color: Colors.grey),
+                        MenuItem(
+                          title: 'Supported Packages',
+                          subtitle:
+                              'Music listening platforms this app supports',
+                          onTap: _showAllowedPackages,
+                        ),
                         const Divider(height: 1, color: Colors.grey),
                         MenuItem(
                           title: 'Permission Settings',
