@@ -446,16 +446,16 @@ def get_track_image(title: str, artist: str, user: User = Depends(get_current_us
 def clear_history(user: User = Depends(get_current_user), session: Session = Depends(get_session)):
     query = delete(Scrobble).where(Scrobble.user_id == user.id)
     session.exec(query)
-    session.commit
+    session.commit()
     return {'message': 'History cleared successfully'}
 
 
-@app.delete('/users/me/clear')
+@app.delete('/users/me')
 def delete_account(user: User = Depends(get_current_user), session: Session = Depends(get_session)):
     session.exec(delete(Scrobble).where(Scrobble.user_id == user.id))
 
     session.delete(user)
-    session.commit
+    session.commit()
     return {'message': 'Account deleted successfully'}
 
 #======================================STATS===================================================

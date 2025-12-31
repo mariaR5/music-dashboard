@@ -6,6 +6,9 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:scrobbler/pages/login_page.dart';
 import 'package:scrobbler/services/auth_service.dart';
+import 'package:flutter_notification_listener/flutter_notification_listener.dart';
+import 'package:scrobbler/widgets/form_fields.dart';
+import 'package:scrobbler/widgets/menu_item.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -16,6 +19,8 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   String _username = 'Loading...';
+  String _email = '...';
+  String _joinedDate = '...';
   bool _isLoading = true;
 
   @override
@@ -39,6 +44,9 @@ class _ProfilePageState extends State<ProfilePage> {
         if (mounted) {
           setState(() {
             _username = data['username'];
+            _email = data['email'] ?? 'No email';
+            String rawDate = data['created_at'] ?? DateTime.now().toString();
+            _joinedDate = rawDate.split('T')[0];
             _isLoading = false;
           });
         }
@@ -57,7 +65,55 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  Future<void> _handleLogout() async {
+  Future<void> _clearHistory() async {
+    final confirmed = await _showConfirmationDialog(
+      title: 'Clear Listening History?',
+      content:
+          'This will permanently delete all your listening stats. This cannot be undone.',
+      confirmText: 'Clear All',
+      isDanger: true,
+    );
+
+    if (confirmed != true) return;
+
+    final baseUrl = dotenv.env['API_BASE_URL']!;
+    final token = await AuthService.getToken();
+
+    await http.delete(
+      Uri.parse('$baseUrl/history/clear'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('History Cleared')));
+    }
+  }
+
+  Future<void> _deleteAccount() async {
+    final confirmed = await _showConfirmationDialog(
+      title: 'Delete Account?',
+      content:
+          "This will permanently delete your account and all associated data. You cannot recover this.",
+      confirmText: 'Delete',
+      isDanger: true,
+    );
+
+    if (confirmed != true) return;
+
+    final baseUrl = dotenv.env['API_BASE_URL']!;
+    final token = await AuthService.getToken();
+
+    await http.delete(
+      Uri.parse('$baseUrl/users/me'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    _logout();
+  }
+
+  Future<void> _logout() async {
     await AuthService.logout();
 
     if (mounted) {
@@ -67,6 +123,40 @@ class _ProfilePageState extends State<ProfilePage> {
         (route) => false,
       );
     }
+  }
+
+  Future<void> openPermissionSettings() async {
+    await NotificationsListener.openPermissionSettings();
+  }
+
+  Future<bool?> _showConfirmationDialog({
+    required String title,
+    required String content,
+    required String confirmText,
+    bool isDanger = false,
+  }) {
+    return showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title, style: const TextStyle(color: Colors.white)),
+        content: Text(content, style: TextStyle(color: Colors.grey)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              confirmText,
+              style: TextStyle(
+                color: isDanger ? Colors.red : const Color(0xFF697565),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -86,58 +176,82 @@ class _ProfilePageState extends State<ProfilePage> {
         title: const Text('Profile'),
         centerTitle: true,
       ),
-      body: Center(
-        child: _isLoading
-            ? const CircularProgressIndicator()
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
                 children: [
-                  Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: sageGreen, width: 3),
-                      color: Colors.grey,
-                    ),
-                    child: const Icon(Icons.person, size: 60),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Username
-                  Text(
-                    _username,
-                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        width: 100,
+                        height: 100,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: sageGreen,
+                        ),
+                        child: const Icon(Icons.person),
+                      ),
+                      const SizedBox(width: 10),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _username,
+                            style: TextStyle(
+                              fontSize: 30,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(_email, style: TextStyle(fontSize: 18)),
+                          const SizedBox(height: 3),
+                          Text(
+                            'Listening since $_joinedDate',
+                            style: TextStyle(fontSize: 16, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 50),
-
-                  // Logout button
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 40),
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton.icon(
-                        onPressed: _handleLogout,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.redAccent,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadiusGeometry.circular(12),
-                          ),
+                  Expanded(
+                    child: ListView(
+                      children: [
+                        const Divider(height: 1, color: Colors.grey),
+                        MenuItem(
+                          title: 'Permission Settings',
+                          subtitle:
+                              'Open notification permission settings on your device',
+                          onTap: NotificationsListener.openPermissionSettings,
                         ),
-                        label: const Text(
-                          'Logout',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        const Divider(height: 1, color: Colors.grey),
+                        MenuItem(
+                          title: 'Clear Listening History',
+                          subtitle: "Delete all data from your account",
+                          onTap: _clearHistory,
                         ),
-                      ),
+                        const Divider(height: 1, color: Colors.grey),
+                        MenuItem(
+                          title: "Delete Account",
+                          subtitle: "Delete your account from our database",
+                          onTap: _deleteAccount,
+                        ),
+                        const Divider(height: 1, color: Colors.grey),
+                      ],
                     ),
+                  ),
+
+                  Padding(
+                    padding: const EdgeInsets.all(40),
+                    child: SubmitButton(label: 'Logout', onTap: _logout),
                   ),
                 ],
               ),
-      ),
+            ),
     );
   }
 }
