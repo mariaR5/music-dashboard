@@ -250,10 +250,19 @@ class UserCreate(SQLModel):
 @app.post('/register')
 async def register_user(user: UserCreate, session: Session = Depends(get_session)):
     # Check if username exists
-    existing = session.exec(select(User).where((User.username == user.username) | (User.email == user.email))).first()
+    existing_user = session.exec(select(User).where((User.username == user.username) | (User.email == user.email))).first()
 
-    if existing:
-        raise HTTPException(status_code=400, detail='Username or email already taken')
+    if existing_user:
+        if existing_user.is_verified:
+            if existing_user.username == user.username:
+                detail = 'Username already taken'
+            else:
+                detail = 'Email already registered'
+            raise HTTPException(status_code=400, detail=detail)
+        else:
+            session.delete(existing_user)
+            session.commit()
+
     
     otp = str(random.randint(100000, 999999))
     otp_exp = datetime.now(timezone.utc) + timedelta(minutes=10)
@@ -366,6 +375,9 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), ses
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(status_code=401, detail='Incorrect username or password')
     
+    if not user.is_verified:
+        raise HTTPException(status_code=403, detail='Email not verified. Please verify your account')
+    
     access_token = create_access_token(data={'sub': user.username})
     return {'access_token': access_token, 'token_type': 'bearer'}
 
@@ -428,6 +440,7 @@ def read_history(
     if limit:
         subquery = (
             select(Scrobble.title, Scrobble.artist, func.max(Scrobble.id).label('latest_id'))
+            .where(Scrobble.user_id == user.id)
             .group_by(Scrobble.title, Scrobble.artist)
             .subquery()
         )
