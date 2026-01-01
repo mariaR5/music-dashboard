@@ -31,6 +31,8 @@ class _RecommendationPageState extends State<RecommendationPage> {
   }
 
   Future<void> fetchRecommendations() async {
+    setState(() => _isLoading = true);
+
     try {
       final token = await AuthService.getToken();
 

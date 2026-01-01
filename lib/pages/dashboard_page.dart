@@ -25,53 +25,101 @@ class _DashboardPageState extends State<DashboardPage> {
 
   late int _selectedMonth; // 0: All time, 1: Jan, 2: Feb,.....
   late int _selectedYear;
+  DateTime? _joinedDate;
 
   bool _isLoading = true;
+
+  Color bgGrey = const Color(0xFF1A1A1A);
+  Color sageGreen = const Color(0xFF697565);
+
+  final List<String> _monthNames = [
+    "",
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
 
   @override
   void initState() {
     super.initState();
+    _initData();
+  }
+
+  Future<void> _initData() async {
+    await _fetchJoinedDate();
 
     final now = DateTime.now();
     _selectedMonth = now.month;
     _selectedYear = now.year;
+
     fetchStats();
+  }
+
+  Future<void> _fetchJoinedDate() async {
+    try {
+      final token = await AuthService.getToken();
+      final response = await http.get(
+        Uri.parse('$baseUrl/users/me'),
+        headers: {"Authorization": "Bearer $token"},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          _joinedDate = DateTime.parse(data['created_at']);
+        });
+      }
+    } catch (e) {
+      print("Error fetching joined date: $e");
+      // Default to start of current year as fallback
+      _joinedDate = DateTime(DateTime.now().year, 1, 1);
+    }
   }
 
   Future<void> fetchStats() async {
     String queryParams = ""; // empty query for all time
-    if (_selectedMonth != 0) {
+    if (_selectedMonth != 0 && _selectedYear != 0) {
       queryParams = "?month=$_selectedMonth&year=$_selectedYear";
     }
 
     try {
       final token = await AuthService.getToken();
+      final headers = {"Authorization": "Bearer $token"};
 
       // Fetch data from server
-      final resTotal = await http.get(
-        Uri.parse("$baseUrl/stats/total$queryParams"),
-        headers: {"Authorization": "Bearer $token"},
-      );
-      final resSongs = await http.get(
-        Uri.parse("$baseUrl/stats/top-songs$queryParams"),
-        headers: {"Authorization": "Bearer $token"},
-      );
-      final resArtists = await http.get(
-        Uri.parse("$baseUrl/stats/top-artists$queryParams"),
-        headers: {"Authorization": "Bearer $token"},
-      );
+      final results = await Future.wait([
+        http.get(
+          Uri.parse("$baseUrl/stats/total$queryParams"),
+          headers: headers,
+        ),
+        http.get(
+          Uri.parse("$baseUrl/stats/top-songs$queryParams"),
+          headers: headers,
+        ),
+        http.get(
+          Uri.parse("$baseUrl/stats/top-artists$queryParams"),
+          headers: headers,
+        ),
+      ]);
 
-      if (resTotal.statusCode == 200 &&
-          resArtists.statusCode == 200 &&
-          resSongs.statusCode == 200) {
+      if (results.every((r) => r.statusCode == 200)) {
         setState(() {
-          _totalPlays = jsonDecode(resTotal.body)["total_plays"];
-          _totalMinutes = jsonDecode(resTotal.body)["total_minutes"];
+          _totalPlays = jsonDecode(results[0].body)["total_plays"];
+          _totalMinutes = jsonDecode(results[0].body)["total_minutes"];
 
-          final List<dynamic> songList = jsonDecode(resSongs.body);
+          final List<dynamic> songList = jsonDecode(results[1].body);
           _topSongs = songList.map((e) => TopSong.fromJson(e)).toList();
 
-          final List<dynamic> artistList = jsonDecode(resArtists.body);
+          final List<dynamic> artistList = jsonDecode(results[2].body);
           _topArtists = artistList.map((e) => TopArtist.fromJson(e)).toList();
 
           _isLoading = false;
@@ -83,6 +131,132 @@ class _DashboardPageState extends State<DashboardPage> {
         _isLoading = false;
       });
     }
+  }
+
+  void _showDateFilterDialog() {
+    if (_joinedDate == null) return;
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        bool isAllTimeSelected = (_selectedMonth == 0 && _selectedYear == 0);
+
+        return AlertDialog(
+          backgroundColor: bgGrey,
+          title: Text(
+            'Select Period',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: MediaQuery.of(context).size.height * 0.5,
+            child: ListView(
+              children: [
+                ListTile(
+                  title: Text(
+                    'All Time',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: isAllTimeSelected ? Colors.white : Colors.grey,
+                      fontSize: 20,
+                    ),
+                  ),
+                  trailing: isAllTimeSelected
+                      ? Icon(Icons.check, color: Colors.grey)
+                      : null,
+                  onTap: () {
+                    setState(() {
+                      _selectedMonth = 0;
+                      _selectedYear = 0;
+                    });
+                    Navigator.pop(ctx);
+                    fetchStats();
+                  },
+                ),
+                const Divider(height: 1, color: Colors.grey),
+                ..._buildDateTree(ctx),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  List<Widget> _buildDateTree(BuildContext ctx) {
+    List<Widget> yearWidgets = [];
+    DateTime now = DateTime.now();
+    DateTime start = _joinedDate!;
+
+    for (int year = now.year; year >= start.year; year--) {
+      // Determine valid month for the speicifc year
+      int startMonth = (year == start.year) ? start.month : 1;
+      int endMonth = (year == now.year) ? now.month : 12;
+
+      List<Widget> monthTiles = [];
+
+      // Loop through months (DEC -> JAN)
+      for (int month = endMonth; month >= startMonth; month--) {
+        bool isSelected = (month == _selectedMonth && year == _selectedYear);
+
+        monthTiles.add(
+          ListTile(
+            title: Text(
+              _monthNames[month],
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.grey,
+                fontSize: 16,
+              ),
+            ),
+            trailing: isSelected ? Icon(Icons.check, color: Colors.grey) : null,
+            contentPadding: const EdgeInsets.only(left: 32),
+            dense: true,
+            onTap: () {
+              setState(() {
+                _selectedMonth = month;
+                _selectedYear = year;
+              });
+              Navigator.pop(ctx);
+              fetchStats();
+            },
+          ),
+        );
+      }
+
+      yearWidgets.add(
+        Theme(
+          data: Theme.of(ctx).copyWith(dividerColor: Colors.transparent),
+          child: Column(
+            children: [
+              ExpansionTile(
+                title: Text(
+                  '$year',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+                ),
+                iconColor: Colors.grey,
+                collapsedIconColor: Colors.white,
+                // Open if its current year
+                initiallyExpanded: year == now.year,
+                children: monthTiles,
+              ),
+              const Divider(height: 1, color: Colors.grey),
+            ],
+          ),
+        ),
+      );
+    }
+    return yearWidgets;
+  }
+
+  String _getCurrentFilterLabel() {
+    if (_selectedMonth == 0) return 'All Time';
+    return '${_monthNames[_selectedMonth]} $_selectedYear';
   }
 
   Widget _buildSectionHeader(String title, VoidCallback onSeeAll) {
@@ -115,32 +289,23 @@ class _DashboardPageState extends State<DashboardPage> {
 
     return Scaffold(
       appBar: AppBar(
+        title: Text(
+          _getCurrentFilterLabel(),
+          style: TextStyle(
+            fontSize: 20,
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         backgroundColor: bgGrey,
         surfaceTintColor: sageGreen,
         elevation: 12,
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: DropdownButton<int>(
-              value: _selectedMonth,
-              icon: Icon(Icons.filter_alt, color: sageGreen, size: 28),
-              underline: Container(),
-              items: [
-                DropdownMenuItem(value: 0, child: Text("All Time")),
-                DropdownMenuItem(value: 11, child: Text("November")),
-                DropdownMenuItem(value: 12, child: Text("December")),
-              ],
-              onChanged: (int? newValue) {
-                if (newValue != null) {
-                  setState(() {
-                    _selectedMonth = newValue;
-                    _isLoading = true;
-                  });
-                  fetchStats();
-                }
-              },
-            ),
+          IconButton(
+            onPressed: _showDateFilterDialog,
+            icon: Icon(Icons.filter_alt, color: Colors.white, size: 28),
           ),
+          const SizedBox(width: 12),
         ],
       ),
       body: RefreshIndicator(
