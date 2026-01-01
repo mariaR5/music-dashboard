@@ -357,7 +357,12 @@ class _DashboardPageState extends State<DashboardPage> {
               );
             }),
             const SizedBox(height: 10),
-            TopSongsList(topSongs: _topSongs),
+            _topSongs.isNotEmpty
+                ? TopSongsList(topSongs: _topSongs)
+                : Text(
+                    'No song data yet! Listen to more music',
+                    style: TextStyle(color: Colors.grey, fontSize: 16),
+                  ),
 
             const SizedBox(height: 40),
 
@@ -376,7 +381,12 @@ class _DashboardPageState extends State<DashboardPage> {
               );
             }),
             const SizedBox(height: 10),
-            TopArtistsList(topArtists: _topArtists),
+            _topArtists.isNotEmpty
+                ? TopArtistsList(topArtists: _topArtists)
+                : Text(
+                    'No artist data yet! Listen to more music',
+                    style: TextStyle(color: Colors.grey, fontSize: 16),
+                  ),
           ],
         ),
       ),

@@ -30,58 +30,53 @@ class _RecommendationPageState extends State<RecommendationPage> {
     fetchRecommendations();
   }
 
+  List<Scrobble> _parseRecs(http.Response response) {
+    if (response.statusCode != 200) return [];
+
+    try {
+      final dynamic decoded = jsonDecode(response.body);
+
+      // If backend returns a map
+      if (decoded is Map) return [];
+
+      // If backend returns a list
+      if (decoded is List) {
+        if (decoded.isEmpty) return [];
+
+        // Check if first item is a message object
+        if (decoded[0] is Map && decoded[0].containsKey('message')) return [];
+      }
+
+      return (decoded as List).map((json) => Scrobble.fromJson(json)).toList();
+    } catch (e) {
+      print('Parse error : $e');
+    }
+    return [];
+  }
+
   Future<void> fetchRecommendations() async {
     setState(() => _isLoading = true);
 
     try {
       final token = await AuthService.getToken();
+      final headers = {"Authorization": "Bearer $token"};
 
       final results = await Future.wait([
-        http.get(
-          Uri.parse("$baseUrl/recommend/vibes"),
-          headers: {"Authorization": "Bearer $token"},
-        ),
-        http.get(
-          Uri.parse("$baseUrl/recommend/lyrics"),
-          headers: {"Authorization": "Bearer $token"},
-        ),
-        http.get(
-          Uri.parse("$baseUrl/recommend/credits"),
-          headers: {"Authorization": "Bearer $token"},
-        ),
-        http.get(
-          Uri.parse("$baseUrl/recommend/artists"),
-          headers: {"Authorization": "Bearer $token"},
-        ),
-        http.get(
-          Uri.parse("$baseUrl/recommend/samples"),
-          headers: {"Authorization": "Bearer $token"},
-        ),
+        http.get(Uri.parse("$baseUrl/recommend/vibes"), headers: headers),
+        http.get(Uri.parse("$baseUrl/recommend/lyrics"), headers: headers),
+        http.get(Uri.parse("$baseUrl/recommend/credits"), headers: headers),
+        http.get(Uri.parse("$baseUrl/recommend/artists"), headers: headers),
+        http.get(Uri.parse("$baseUrl/recommend/samples"), headers: headers),
       ]);
 
       if (mounted) {
         setState(() {
           // Process flow recs
-          if (results[0].statusCode == 200) {
-            final List<dynamic> data = jsonDecode(results[0].body);
-            _flowRecs = data.map((json) => Scrobble.fromJson(json)).toList();
-          }
-          if (results[1].statusCode == 200) {
-            final List<dynamic> data = jsonDecode(results[1].body);
-            _lyricRecs = data.map((json) => Scrobble.fromJson(json)).toList();
-          }
-          if (results[2].statusCode == 200) {
-            final List<dynamic> data = jsonDecode(results[2].body);
-            _creditRecs = data.map((json) => Scrobble.fromJson(json)).toList();
-          }
-          if (results[3].statusCode == 200) {
-            final List<dynamic> data = jsonDecode(results[3].body);
-            _artistRecs = data.map((json) => Scrobble.fromJson(json)).toList();
-          }
-          if (results[4].statusCode == 200) {
-            final List<dynamic> data = jsonDecode(results[4].body);
-            _sampleRecs = data.map((json) => Scrobble.fromJson(json)).toList();
-          }
+          _flowRecs = _parseRecs(results[0]);
+          _lyricRecs = _parseRecs(results[1]);
+          _creditRecs = _parseRecs(results[2]);
+          _artistRecs = _parseRecs(results[3]);
+          _sampleRecs = _parseRecs(results[4]);
           _isLoading = false;
         });
       }
@@ -101,6 +96,19 @@ class _RecommendationPageState extends State<RecommendationPage> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) return const Center(child: CircularProgressIndicator());
+
+    final bool isEmpty =
+        _flowRecs.isEmpty &&
+        _lyricRecs.isEmpty &&
+        _creditRecs.isEmpty &&
+        _artistRecs.isEmpty &&
+        _sampleRecs.isEmpty;
+
+    if (isEmpty) {
+      return const Center(
+        child: Text('Listen to some music and check back later'),
+      );
+    }
 
     return Scaffold(
       body: RefreshIndicator(
