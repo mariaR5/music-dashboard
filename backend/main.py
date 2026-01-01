@@ -408,6 +408,13 @@ async def receive_scrobble(
 
     spotify_data = enrich_data(req.title, req.artist)
 
+    if not spotify_data:
+        print(f"{req.title} not found on Spotify. Skipping database save")
+        return {
+            'status': 'Skipped',
+            'message': 'Song not found on Spotify'
+        }
+
     new_scrobble = Scrobble(
         user_id=user.id,
         title=req.title,
