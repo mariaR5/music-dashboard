@@ -21,8 +21,7 @@ class BuildTextField extends StatefulWidget {
 class _BuildTextFieldState extends State<BuildTextField> {
   @override
   Widget build(BuildContext context) {
-    const sageGreen = Color(0xFF697565);
-    const greyAccent = Color(0xFF3B3B3B);
+    final colors = Theme.of(context).colorScheme;
 
     return TextField(
       controller: widget.fieldController,
@@ -33,15 +32,15 @@ class _BuildTextFieldState extends State<BuildTextField> {
         hintText: widget.isOtp ? '######' : '',
         floatingLabelStyle: TextStyle(color: Colors.white),
         filled: true,
-        fillColor: greyAccent,
+        fillColor: colors.surface,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: sageGreen),
+          borderSide: BorderSide(color: colors.secondary),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: sageGreen),
+          borderSide: BorderSide(color: colors.secondary),
         ),
       ),
     );
@@ -66,14 +65,14 @@ class SubmitButton extends StatefulWidget {
 class _SubmitButtonState extends State<SubmitButton> {
   @override
   Widget build(BuildContext context) {
-    const sageGreen = Color(0xFF697565);
+    final colors = Theme.of(context).colorScheme;
 
     return SizedBox(
       height: 50,
       child: ElevatedButton(
         onPressed: widget.isLoading ? null : widget.onTap,
         style: ElevatedButton.styleFrom(
-          backgroundColor: sageGreen,
+          backgroundColor: colors.secondary,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadiusGeometry.circular(20),
           ),

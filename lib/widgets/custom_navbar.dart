@@ -12,6 +12,7 @@ class CustomNavbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
@@ -26,8 +27,8 @@ class CustomNavbar extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
         child: BottomNavigationBar(
-          backgroundColor: const Color(0x55697565),
-          selectedItemColor: Colors.white,
+          backgroundColor: colors.surface,
+          selectedItemColor: colors.onSecondary,
           selectedLabelStyle: TextStyle(fontSize: 10),
           unselectedLabelStyle: TextStyle(fontSize: 10),
           selectedIconTheme: IconThemeData(size: 30),

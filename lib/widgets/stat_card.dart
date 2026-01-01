@@ -3,21 +3,16 @@ import 'package:flutter/material.dart';
 class StatCard extends StatelessWidget {
   final String title;
   final int value;
-  final Color sageGreen;
 
-  const StatCard({
-    super.key,
-    required this.title,
-    required this.value,
-    required this.sageGreen,
-  });
+  const StatCard({super.key, required this.title, required this.value});
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: sageGreen,
+        color: colors.secondary,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(

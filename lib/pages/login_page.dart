@@ -77,7 +77,9 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Scaffold(
+      backgroundColor: colors.primary,
       body: SingleChildScrollView(
         child: ConstrainedBox(
           constraints: BoxConstraints(
@@ -124,10 +126,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 16),
                   if (_errorMessage != null)
-                    Text(
-                      _errorMessage!,
-                      style: const TextStyle(color: Colors.red),
-                    ),
+                    Text(_errorMessage!, style: TextStyle(color: colors.error)),
                   const SizedBox(height: 24),
                   SubmitButton(
                     isLoading: _isLoading,
@@ -138,7 +137,10 @@ class _LoginPageState extends State<LoginPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text('New User?', style: TextStyle(color: Colors.grey)),
+                      Text(
+                        'New User?',
+                        style: TextStyle(color: colors.surface),
+                      ),
                       TextButton(
                         onPressed: () {
                           Navigator.push(

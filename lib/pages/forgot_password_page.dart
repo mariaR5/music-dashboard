@@ -267,7 +267,9 @@ class _ForgotPasswordNewPassPageState extends State<ForgotPasswordNewPassPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Scaffold(
+      backgroundColor: colors.primary,
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 80),
@@ -279,9 +281,9 @@ class _ForgotPasswordNewPassPageState extends State<ForgotPasswordNewPassPage> {
                 style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
-              const Text(
+              Text(
                 'Create a strong new password for your account',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
+                style: TextStyle(fontSize: 16, color: colors.surface),
               ),
               const SizedBox(height: 40),
 
@@ -301,7 +303,7 @@ class _ForgotPasswordNewPassPageState extends State<ForgotPasswordNewPassPage> {
                   padding: const EdgeInsets.only(top: 16),
                   child: Text(
                     _errorMessage!,
-                    style: TextStyle(color: Colors.red),
+                    style: TextStyle(color: colors.error),
                   ),
                 ),
 

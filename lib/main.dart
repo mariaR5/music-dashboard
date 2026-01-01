@@ -136,8 +136,34 @@ Future<void> main() async {
 
   runApp(
     MaterialApp(
-      theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF1A1A1A),
+      theme: ThemeData(
+        scaffoldBackgroundColor: Color(0xFF1A1A1A),
+        colorScheme: const ColorScheme(
+          brightness: Brightness.dark,
+          primary: Color(0xFF1A1A1A),
+          onPrimary: Colors.white,
+          secondary: Color(0xFF697565),
+          onSecondary: Colors.white,
+          error: Colors.red,
+          onError: Colors.white,
+          surface: Color(0xFF3B3B3B),
+          onSurface: Colors.grey,
+        ),
+        textTheme: ThemeData.dark().textTheme.apply(
+          bodyColor: Colors.white,
+          displayColor: Colors.white,
+        ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF1A1A1A),
+          foregroundColor: Colors.white, // title + icons
+          titleTextStyle: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+          iconTheme: IconThemeData(color: Colors.white),
+          centerTitle: true,
+        ),
       ),
       home: isLoggedIn ? const ScrobblerHome() : const LoginPage(),
     ),

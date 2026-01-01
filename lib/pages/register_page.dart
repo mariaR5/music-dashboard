@@ -85,8 +85,9 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A),
+      backgroundColor: colors.primary,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         leading: IconButton(
@@ -106,9 +107,9 @@ class _RegisterPageState extends State<RegisterPage> {
                 style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
-              const Text(
+              Text(
                 'Start your music tracking journey today',
-                style: TextStyle(color: Colors.grey, fontSize: 16),
+                style: TextStyle(color: colors.onSurface, fontSize: 16),
               ),
               const SizedBox(height: 40),
 
@@ -148,7 +149,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   padding: const EdgeInsets.only(bottom: 16),
                   child: Text(
                     _errorMessage!,
-                    style: TextStyle(color: Colors.red),
+                    style: TextStyle(color: colors.error),
                   ),
                 ),
 

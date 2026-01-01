@@ -62,7 +62,9 @@ class _VerifyPageState extends State<VerifyPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Scaffold(
+      backgroundColor: colors.primary,
       body: SingleChildScrollView(
         child: ConstrainedBox(
           constraints: BoxConstraints(
@@ -90,10 +92,7 @@ class _VerifyPageState extends State<VerifyPage> {
 
                   const SizedBox(height: 24),
                   if (_errorMessage != null)
-                    Text(
-                      _errorMessage!,
-                      style: const TextStyle(color: Colors.red),
-                    ),
+                    Text(_errorMessage!, style: TextStyle(color: colors.error)),
 
                   const SizedBox(height: 24),
                   SubmitButton(

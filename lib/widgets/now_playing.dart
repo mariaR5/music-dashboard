@@ -5,6 +5,7 @@ class NowPlaying extends StatelessWidget {
   final String title;
   final String artist;
   final String? imageUrl;
+  final bool isLoading;
   final bool isAnimating;
 
   const NowPlaying({
@@ -12,11 +13,13 @@ class NowPlaying extends StatelessWidget {
     required this.title,
     required this.artist,
     this.imageUrl,
+    this.isLoading = false,
     this.isAnimating = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -43,11 +46,17 @@ class NowPlaying extends StatelessWidget {
                   Container(
                     height: 200,
                     width: 200,
-                    color: const Color(0xFF697565),
+                    color: colors.surface,
                     child: ClipRRect(
-                      child: imageUrl != null
+                      child: isLoading
+                          ? Center(
+                              child: CircularProgressIndicator(
+                                color: colors.secondary,
+                              ),
+                            )
+                          : imageUrl != null
                           ? Image.network(imageUrl!, fit: BoxFit.cover)
-                          : Icon(Icons.music_note),
+                          : Icon(Icons.music_note, color: colors.secondary),
                     ),
                   ),
                 ],

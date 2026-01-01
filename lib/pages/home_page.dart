@@ -30,9 +30,6 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final Color sageGreen = const Color(0xFF697565);
-  final Color bgGrey = const Color(0xFF1A1A1A);
-
   final MusicService _musicService = MusicService();
 
   String? _currentTrackImage;
@@ -103,145 +100,154 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return Scaffold(
-      backgroundColor: bgGrey,
+      backgroundColor: colors.primary,
       body: SafeArea(
         child: RefreshIndicator(
+          color: Colors.white,
           onRefresh: _loadData,
-          child: CustomScrollView(
-            slivers: [
-              //=========Top status badge and profile icon=============
-              SliverPadding(
-                padding: EdgeInsetsGeometry.all(16),
-                sliver: SliverToBoxAdapter(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const ProfilePage(),
+          child: _isLoading
+              ? const Center(
+                  child: CircularProgressIndicator(color: Colors.white),
+                )
+              : CustomScrollView(
+                  slivers: [
+                    //=========Top status badge and profile icon=============
+                    SliverPadding(
+                      padding: EdgeInsetsGeometry.all(16),
+                      sliver: SliverToBoxAdapter(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const ProfilePage(),
+                                  ),
+                                );
+                              },
+                              child: CircleAvatar(
+                                radius: 25,
+                                backgroundColor: colors.surface,
+                                child: Icon(
+                                  Icons.person,
+                                  color: Colors.white,
+                                  size: 30,
+                                ),
+                              ),
                             ),
-                          );
-                        },
-                        child: CircleAvatar(
-                          radius: 25,
-                          backgroundColor: const Color(0xFF3B3B3B),
-                          child: Icon(Icons.person, color: Colors.white),
+
+                            StatusCard(
+                              isServiceRunning: widget.isServiceRunning,
+                              currentPackage: widget.currentPackage,
+                            ),
+                          ],
                         ),
                       ),
+                    ),
 
-                      StatusCard(
-                        isServiceRunning: widget.isServiceRunning,
-                        currentPackage: widget.currentPackage,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+                    //=======Now playing block========
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                "Now Playing...",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 20,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 36),
 
-              //=======Now playing block========
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          "Now Playing...",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 20,
-                          ),
+                            NowPlaying(
+                              title: widget.currentTitle,
+                              artist: widget.currentArtist,
+                              imageUrl: _currentTrackImage,
+                              isLoading: _isImageLoading,
+                              isAnimating:
+                                  widget.isServiceRunning &&
+                                  widget.currentTitle != 'No song detected',
+                            ),
+                            const SizedBox(height: 8),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 36),
+                    ),
 
-                      NowPlaying(
-                        title: widget.currentTitle,
-                        artist: widget.currentArtist,
-                        imageUrl: _currentTrackImage,
-                        isAnimating:
-                            widget.isServiceRunning &&
-                            widget.currentTitle != 'No song detected',
-                      ),
-                      const SizedBox(height: 8),
-                    ],
-                  ),
-                ),
-              ),
-
-              //=========== Recently Played ================
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: RecommendSection(
-                    title: "Recently Played",
-                    items: _recentSongs,
-                    onTap: _launchSpotify,
-                  ),
-                ),
-              ),
-
-              //========= Today at a glance ============
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Title
-                      Text(
-                        "Today at a Glance",
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
+                    //=========== Recently Played ================
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: RecommendSection(
+                          title: "Recently Played",
+                          items: _recentSongs,
+                          onTap: _launchSpotify,
                         ),
                       ),
-                      const SizedBox(height: 24),
+                    ),
 
-                      // Top artist
-                      ArtistCard(
-                        title: "Top Artist",
-                        artist: _todayStats?.topArtistName ?? '-',
-                        imageUrl: _todayStats?.topArtistImage,
-                        sageGreen: sageGreen,
-                      ),
-                      const SizedBox(height: 8),
+                    //========= Today at a glance ============
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // Title
+                            Text(
+                              "Today at a Glance",
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
 
-                      // Stats Row
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          //---Total Plays---
-                          Expanded(
-                            child: StatCard(
-                              title: 'Total Plays',
-                              value: _todayStats?.totalPlays ?? 0,
-                              sageGreen: sageGreen,
+                            // Top artist
+                            ArtistCard(
+                              title: "Top Artist",
+                              artist: _todayStats?.topArtistName ?? '-',
+                              imageUrl: _todayStats?.topArtistImage,
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          //---Total Minutes
-                          Expanded(
-                            child: StatCard(
-                              title: 'Minutes Listened',
-                              value: _todayStats?.minutesListened ?? 0,
-                              sageGreen: sageGreen,
+                            const SizedBox(height: 8),
+
+                            // Stats Row
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceAround,
+                              children: [
+                                //---Total Plays---
+                                Expanded(
+                                  child: StatCard(
+                                    title: 'Total Plays',
+                                    value: _todayStats?.totalPlays ?? 0,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                //---Total Minutes
+                                Expanded(
+                                  child: StatCard(
+                                    title: 'Minutes Listened',
+                                    value: _todayStats?.minutesListened ?? 0,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
         ),
       ),
     );

@@ -4,22 +4,21 @@ class ArtistCard extends StatelessWidget {
   final String title;
   final String artist;
   final String? imageUrl;
-  final Color sageGreen;
 
   const ArtistCard({
     super.key,
     required this.title,
     required this.artist,
     this.imageUrl,
-    required this.sageGreen,
   });
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       decoration: BoxDecoration(
-        color: sageGreen,
+        color: colors.secondary,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -27,7 +26,7 @@ class ArtistCard extends StatelessWidget {
           // Artist Image
           CircleAvatar(
             radius: 35,
-            backgroundColor: sageGreen,
+            backgroundColor: colors.secondary,
             backgroundImage: imageUrl != null ? NetworkImage(imageUrl!) : null,
             child: imageUrl == null ? Icon(Icons.person) : null,
           ),

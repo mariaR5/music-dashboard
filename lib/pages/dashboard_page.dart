@@ -29,9 +29,6 @@ class _DashboardPageState extends State<DashboardPage> {
 
   bool _isLoading = true;
 
-  Color bgGrey = const Color(0xFF1A1A1A);
-  Color sageGreen = const Color(0xFF697565);
-
   final List<String> _monthNames = [
     "",
     "January",
@@ -134,6 +131,7 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   void _showDateFilterDialog() {
+    final colors = Theme.of(context).colorScheme;
     if (_joinedDate == null) return;
 
     showDialog(
@@ -142,7 +140,7 @@ class _DashboardPageState extends State<DashboardPage> {
         bool isAllTimeSelected = (_selectedMonth == 0 && _selectedYear == 0);
 
         return AlertDialog(
-          backgroundColor: bgGrey,
+          backgroundColor: colors.primary,
           title: Text(
             'Select Period',
             style: TextStyle(fontWeight: FontWeight.bold),
@@ -157,12 +155,14 @@ class _DashboardPageState extends State<DashboardPage> {
                     'All Time',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: isAllTimeSelected ? Colors.white : Colors.grey,
+                      color: isAllTimeSelected
+                          ? Colors.white
+                          : colors.onSurface,
                       fontSize: 20,
                     ),
                   ),
                   trailing: isAllTimeSelected
-                      ? Icon(Icons.check, color: Colors.grey)
+                      ? Icon(Icons.check, color: colors.onSurface)
                       : null,
                   onTap: () {
                     setState(() {
@@ -173,7 +173,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     fetchStats();
                   },
                 ),
-                const Divider(height: 1, color: Colors.grey),
+                Divider(height: 1, color: colors.surface),
                 ..._buildDateTree(ctx),
               ],
             ),
@@ -181,7 +181,7 @@ class _DashboardPageState extends State<DashboardPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+              child: Text('Cancel', style: TextStyle(color: colors.onSurface)),
             ),
           ],
         );
@@ -280,14 +280,16 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
-    final Color sageGreen = Color(0xFF697565);
-    final Color bgGrey = const Color(0xFF1A1A1A);
+    final colors = Theme.of(context).colorScheme;
 
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(
+        child: CircularProgressIndicator(color: Colors.white),
+      );
     }
 
     return Scaffold(
+      backgroundColor: colors.primary,
       appBar: AppBar(
         title: Text(
           _getCurrentFilterLabel(),
@@ -297,8 +299,8 @@ class _DashboardPageState extends State<DashboardPage> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        backgroundColor: bgGrey,
-        surfaceTintColor: sageGreen,
+        backgroundColor: colors.primary,
+        surfaceTintColor: colors.secondary,
         elevation: 12,
         actions: [
           IconButton(
@@ -309,6 +311,7 @@ class _DashboardPageState extends State<DashboardPage> {
         ],
       ),
       body: RefreshIndicator(
+        color: Colors.white,
         onRefresh: fetchStats,
         child: ListView(
           padding: const EdgeInsets.all(16),
@@ -323,11 +326,7 @@ class _DashboardPageState extends State<DashboardPage> {
               children: [
                 //---Total Plays---
                 Expanded(
-                  child: StatCard(
-                    title: 'Total Plays',
-                    value: _totalPlays,
-                    sageGreen: sageGreen,
-                  ),
+                  child: StatCard(title: 'Total Plays', value: _totalPlays),
                 ),
                 const SizedBox(width: 16),
                 //---Total Minutes
@@ -335,7 +334,6 @@ class _DashboardPageState extends State<DashboardPage> {
                   child: StatCard(
                     title: 'Minutes Listened',
                     value: _totalMinutes,
-                    sageGreen: sageGreen,
                   ),
                 ),
               ],

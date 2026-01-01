@@ -57,6 +57,8 @@ class _StatusCardState extends State<StatusCard> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     String textToShow;
     Key key;
 
@@ -76,10 +78,10 @@ class _StatusCardState extends State<StatusCard> {
 
     return Container(
       height: 40,
-      width: 200,
+      width: 290,
       padding: EdgeInsets.symmetric(vertical: 5, horizontal: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFF3B3B3B),
+        color: colors.surface,
         borderRadius: BorderRadius.circular(820),
       ),
       child: AnimatedSwitcher(
@@ -95,7 +97,7 @@ class _StatusCardState extends State<StatusCard> {
           key: key,
           style: TextStyle(
             fontSize: 16,
-            color: Colors.grey,
+            color: colors.onSurface,
             fontWeight: FontWeight.bold,
           ),
           maxLines: 1,

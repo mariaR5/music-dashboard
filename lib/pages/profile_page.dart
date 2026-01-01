@@ -106,6 +106,8 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _showRecPeriodSelector() {
+    final colors = Theme.of(context).colorScheme;
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -129,6 +131,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 value: entry.key,
                 groupValue: _recPeriod,
                 dense: true,
+                activeColor: colors.secondary,
                 onChanged: (val) {
                   if (val != null) {
                     _updateRecPeriod(val);
@@ -313,11 +316,10 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    const sageGreen = Color(0xFF697565);
-    const bgGrey = Color(0xFF1A1A1A);
+    final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: bgGrey,
+      backgroundColor: colors.primary,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -329,7 +331,7 @@ class _ProfilePageState extends State<ProfilePage> {
         centerTitle: true,
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: Colors.white))
           : Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -345,7 +347,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           shape: BoxShape.circle,
                           color: sageGreen,
                         ),
-                        child: const Icon(Icons.person),
+                        child: const Icon(Icons.person, size: 50),
                       ),
                       const SizedBox(width: 20),
                       Column(

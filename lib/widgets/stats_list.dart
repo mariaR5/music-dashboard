@@ -7,6 +7,7 @@ class TopSongsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return ListView.builder(
       itemCount: topSongs.length,
       physics: NeverScrollableScrollPhysics(),
@@ -26,7 +27,7 @@ class TopSongsList extends StatelessWidget {
                 child: Text(
                   '${index + 1}',
                   style: TextStyle(
-                    color: const Color(0xFF697565),
+                    color: colors.secondary,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
@@ -45,7 +46,7 @@ class TopSongsList extends StatelessWidget {
                     : Container(
                         width: 80,
                         height: 80,
-                        color: const Color(0xFF3B3B3B),
+                        color: colors.primary,
                         child: Icon(Icons.music_note),
                       ),
               ),
@@ -79,7 +80,7 @@ class TopSongsList extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 5),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(20),
-                        color: Color(0xFF697565),
+                        color: colors.secondary,
                       ),
                       child: Text(
                         '${song.plays} plays',
@@ -106,6 +107,7 @@ class TopArtistsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return ListView.builder(
       itemCount: topArtists.length,
       physics: NeverScrollableScrollPhysics(),
@@ -124,7 +126,7 @@ class TopArtistsList extends StatelessWidget {
                 child: Text(
                   '${index + 1}',
                   style: TextStyle(
-                    color: const Color(0xFF697565),
+                    color: colors.secondary,
                     fontWeight: FontWeight.bold,
                     fontSize: 20,
                   ),

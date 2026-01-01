@@ -76,13 +76,14 @@ class _TopItemsPageState extends State<TopItemsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
         title: Text(
           widget.title,
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: const Color(0xFF3B3B3B),
+        backgroundColor: colors.primary,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

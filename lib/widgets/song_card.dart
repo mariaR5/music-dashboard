@@ -22,6 +22,7 @@ class SongCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return GestureDetector(
       onTap: onTap,
       child: SizedBox(
@@ -40,7 +41,7 @@ class SongCard extends StatelessWidget {
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {
                           return Container(
-                            color: Colors.grey,
+                            color: colors.surface,
                             child: Icon(Icons.music_note),
                           );
                         },
@@ -58,7 +59,7 @@ class SongCard extends StatelessWidget {
                         return Container(
                           width: 150,
                           height: 150,
-                          color: Colors.grey,
+                          color: colors.onSurface,
                           child: Icon(Icons.music_note),
                         );
                       },
@@ -77,13 +78,13 @@ class SongCard extends StatelessWidget {
               artist,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
+              style: TextStyle(fontSize: 12, color: colors.onSurface),
             ),
             const SizedBox(height: 3),
             if (showItemReason && reason != null)
               Text(
                 reason!,
-                style: const TextStyle(fontSize: 8, color: Colors.grey),
+                style: TextStyle(fontSize: 8, color: colors.onSurface),
                 textAlign: TextAlign.center,
               ),
           ],

@@ -95,7 +95,13 @@ class _RecommendationPageState extends State<RecommendationPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) return const Center(child: CircularProgressIndicator());
+    final colors = Theme.of(context).colorScheme;
+
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: Colors.white),
+      );
+    }
 
     final bool isEmpty =
         _flowRecs.isEmpty &&
@@ -111,13 +117,15 @@ class _RecommendationPageState extends State<RecommendationPage> {
     }
 
     return Scaffold(
+      backgroundColor: colors.primary,
+      appBar: AppBar(title: Text('Discover similar music')),
       body: RefreshIndicator(
+        color: Colors.white,
         onRefresh: fetchRecommendations,
         child: SafeArea(
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              const SizedBox(height: 20),
               Text(
                 'For You...',
                 style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
