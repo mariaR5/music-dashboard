@@ -23,7 +23,7 @@ class MenuItem extends StatelessWidget {
           children: [
             Text(
               title,
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 4),
             Text(subtitle, style: TextStyle(color: Colors.grey, fontSize: 12)),

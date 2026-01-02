@@ -317,8 +317,9 @@ class _DashboardPageState extends State<DashboardPage> {
           padding: const EdgeInsets.all(16),
           children: [
             Text(
-              "Your Listening Vibe",
+              "Your Listening Dashboard",
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 40),
             Row(

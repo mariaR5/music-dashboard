@@ -4,6 +4,7 @@ import 'package:scrobbler/models/scrobble.dart';
 import 'package:scrobbler/pages/profile_page.dart';
 import 'package:scrobbler/services/music_service.dart';
 import 'package:scrobbler/widgets/artist_card.dart';
+import 'package:scrobbler/widgets/info_bullet.dart';
 import 'package:scrobbler/widgets/now_playing.dart';
 import 'package:scrobbler/widgets/recommend_section.dart';
 import 'package:scrobbler/widgets/stat_card.dart';
@@ -98,6 +99,58 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  void _showInfoDialog(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: colors.primary,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          content: const SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                InfoBullet(
+                  title: 'How it works',
+                  text:
+                      "This app reads the 'Now Playing' notifications from your status bar. It only detects music from the apps listed in your Profile > Allowed Packages.",
+                ),
+                SizedBox(height: 16),
+                InfoBullet(
+                  title: "Keep it running",
+                  text:
+                      "The app must be open in the background to detect songs. For the best experience, lock this app in your 'Recent Apps' screen so your phone doesn't close it to save battery.",
+                ),
+                SizedBox(height: 16),
+                InfoBullet(
+                  title: "Looping Songs",
+                  text:
+                      "If you play the exact same song multiple times in a row (Loop Mode), it counts as 1 play. The song title must change for a new scrobble to trigger.",
+                ),
+                SizedBox(height: 16),
+                InfoBullet(
+                  title: "The 30-Second Rule",
+                  text:
+                      "You must listen to a song for at least 30 seconds. If you skip before that, it won't be saved.",
+                ),
+                SizedBox(height: 16),
+                InfoBullet(
+                  title: "Database Requirement",
+                  text:
+                      "Only songs that can be matched to a track on Spotify will be saved to your history and stats.",
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
@@ -121,22 +174,25 @@ class _HomePageState extends State<HomePage> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            GestureDetector(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const ProfilePage(),
+                            Padding(
+                              padding: const EdgeInsets.only(right: 8.0),
+                              child: GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const ProfilePage(),
+                                    ),
+                                  );
+                                },
+                                child: CircleAvatar(
+                                  radius: 25,
+                                  backgroundColor: colors.surface,
+                                  child: Icon(
+                                    Icons.person,
+                                    color: Colors.white,
+                                    size: 30,
                                   ),
-                                );
-                              },
-                              child: CircleAvatar(
-                                radius: 25,
-                                backgroundColor: colors.surface,
-                                child: Icon(
-                                  Icons.person,
-                                  color: Colors.white,
-                                  size: 30,
                                 ),
                               ),
                             ),
@@ -144,6 +200,10 @@ class _HomePageState extends State<HomePage> {
                             StatusCard(
                               isServiceRunning: widget.isServiceRunning,
                               currentPackage: widget.currentPackage,
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.info_outline, size: 30),
+                              onPressed: () => _showInfoDialog(context),
                             ),
                           ],
                         ),
@@ -163,7 +223,7 @@ class _HomePageState extends State<HomePage> {
                                 "Now Playing...",
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 20,
+                                  fontSize: 24,
                                 ),
                               ),
                             ),

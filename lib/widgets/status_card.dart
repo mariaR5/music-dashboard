@@ -41,7 +41,7 @@ class _StatusCardState extends State<StatusCard> {
     super.initState();
 
     // Timer to change index (0 and 1) every 3 seconds
-    _timer = Timer.periodic(const Duration(seconds: 5), (timer) {
+    _timer = Timer.periodic(const Duration(seconds: 3), (timer) {
       if (mounted) {
         setState(() {
           _msgIndex = (_msgIndex + 1) % 2;
@@ -77,32 +77,34 @@ class _StatusCardState extends State<StatusCard> {
     }
 
     return Container(
-      height: 40,
-      width: 290,
+      height: 50,
+      width: 240,
       padding: EdgeInsets.symmetric(vertical: 5, horizontal: 10),
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(820),
       ),
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 800),
-        transitionBuilder: (child, animation) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-        layoutBuilder: (currentChild, previousChild) {
-          return currentChild ?? const SizedBox.shrink();
-        },
-        child: Text(
-          textToShow,
-          key: key,
-          style: TextStyle(
-            fontSize: 16,
-            color: colors.onSurface,
-            fontWeight: FontWeight.bold,
+      child: Center(
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 800),
+          transitionBuilder: (child, animation) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+          layoutBuilder: (currentChild, previousChild) {
+            return currentChild ?? const SizedBox.shrink();
+          },
+          child: Text(
+            textToShow,
+            key: key,
+            style: TextStyle(
+              fontSize: 16,
+              color: colors.onSurface,
+              fontWeight: FontWeight.bold,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
           ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          textAlign: TextAlign.center,
         ),
       ),
     );

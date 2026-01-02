@@ -111,8 +111,8 @@ class _RecommendationPageState extends State<RecommendationPage> {
         _sampleRecs.isEmpty;
 
     if (isEmpty) {
-      return const Center(
-        child: Text('Listen to some music and check back later'),
+      return Scaffold(
+        body: Center(child: Text('Listen to some music and check back later')),
       );
     }
 
@@ -126,11 +126,6 @@ class _RecommendationPageState extends State<RecommendationPage> {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              Text(
-                'For You...',
-                style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 40),
               // 1. Vibe Recommender
               if (_flowRecs.isNotEmpty)
                 RecommendSection(

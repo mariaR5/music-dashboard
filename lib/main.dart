@@ -156,7 +156,7 @@ Future<void> main() async {
         ),
         appBarTheme: const AppBarTheme(
           backgroundColor: Color(0xFF1A1A1A),
-          foregroundColor: Colors.white, // title + icons
+          foregroundColor: Colors.white,
           titleTextStyle: TextStyle(
             color: Colors.white,
             fontSize: 20,
