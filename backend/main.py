@@ -40,11 +40,18 @@ sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
 ))
 
 # Setup the database
-sqllite_file_name = "music.db" # database name
-sqllite_url = f"sqlite:///{sqllite_file_name}" # database url
+database_url = os.getenv('DATABASE_URL')
 
-# Create engine -> responsible for database connection
-engine = create_engine(sqllite_url)
+# SQL alchemy require postgresql://, but Render provides postgres://
+if database_url and database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
+
+# Fallback to SQLite if no url found
+if not database_url:
+    database_url = "sqlite:///music.db"
+
+# Create engine
+engine = create_engine(database_url)
 
 # USER TABLE
 class User(SQLModel, table=True):
