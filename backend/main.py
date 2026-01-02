@@ -8,7 +8,7 @@ from fastapi import FastAPI, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
 from sqlmodel import SQLModel, Session, create_engine, Field, select, delete
-from sqlalchemy import func, extract
+from sqlalchemy import func, extract, BigInteger
 from typing import Optional, List
 from datetime import datetime, timezone, timedelta
 from collections import Counter
@@ -76,7 +76,7 @@ class Scrobble(SQLModel, table=True):
     title: str
     artist: str
     package: str
-    timestamp: int
+    timestamp: int = Field(sa_type=BigInteger)
     # Time server recieved data
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 

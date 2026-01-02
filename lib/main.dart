@@ -52,7 +52,7 @@ void _callback(NotificationEvent evt) async {
   _scrobbleTimer?.cancel();
 
   // Send data to backend only if user listens to atleast 30 seconds
-  _scrobbleTimer = Timer(const Duration(seconds: 3), () async {
+  _scrobbleTimer = Timer(const Duration(seconds: 30), () async {
     print("Scrobble confirmed: $_lastTitle");
 
     // Send data to python backend
