@@ -602,7 +602,7 @@ def get_top_artists(
     query = (
         select(Scrobble.artist, Scrobble.artist_image, func.count(Scrobble.id).label("plays"))
         .where(Scrobble.user_id == user.id)
-        .group_by(Scrobble.artist)
+        .group_by(Scrobble.artist, Scrobble.artist_image)
         .order_by(func.count(Scrobble.id).desc())
         .limit(limit)
     )
