@@ -768,7 +768,7 @@ def get_vibe_recommendations(session: Session = Depends(get_session), user: User
                         "artist": track['artists'][0]['name'],
                         "image_url": track['album']['images'][0]["url"] if track['album']['images'] else "",
                         "spotify_url": track['external_urls']['spotify'],
-                        "reason": f"Because you listened to {title}",
+                        "reason": f"Similar vibe to {title}",
                     })
             
             except Exception as e:
@@ -917,7 +917,7 @@ def get_lyrical_recommendations(session: Session = Depends(get_session), user: U
                         "artist": track['artists'][0]['name'],
                         "image_url": track['album']['images'][0]["url"] if track['album']['images'] else "",
                         "spotify_url": track['external_urls']['spotify'],
-                        "reason": f"Because you listened to {title}",
+                        "reason": f"Lyrically similar to {title}",
                     })
             
             except Exception as e:
