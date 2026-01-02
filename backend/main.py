@@ -6,7 +6,6 @@ import requests
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
 
 from sqlmodel import SQLModel, Session, create_engine, Field, select, delete
 from sqlalchemy import func, extract
@@ -33,19 +32,6 @@ ACCESS_TOKEN_EXPIRY_MINUTES = 30000
 
 # Method to extract token
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl = 'token')
-
-# Email config
-conf = ConnectionConfig(
-    MAIL_USERNAME=os.getenv('MAIL_USERNAME'),
-    MAIL_PASSWORD=os.getenv('MAIL_PASSWORD'),
-    MAIL_FROM=os.getenv('MAIL_USERNAME'),
-    MAIL_PORT=465,
-    MAIL_SERVER=os.getenv('MAIL_SERVER'),
-    MAIL_STARTTLS=False,
-    MAIL_SSL_TLS=True,
-    USE_CREDENTIALS=True,
-    VALIDATE_CERTS=True
-)
 
 # Create spotify client
 sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
@@ -213,6 +199,17 @@ def get_current_user(token: str = Depends(oauth2_scheme), session: Session = Dep
 
 
 async def send_otp_email(email: str, otp: str, subject: str = 'Your Verification Code'):
+    url = "https://api.brevo.com/v3/smtp/email"
+
+    api_key = os.getenv('BREVO_API_KEY')
+    sender_email = os.getenv('MAIL_USERNAME')
+
+    headers = {
+        'accept': 'application/json',
+        'api-key': api_key,
+        'content-type': 'application/json'
+    }
+
     html = f"""
     <div style="font-family: Arial, sans-serif; padding: 20px">
     <h2>Universal Scrobbler Security</h2>
@@ -223,15 +220,22 @@ async def send_otp_email(email: str, otp: str, subject: str = 'Your Verification
     </div>
     """
 
-    message = MessageSchema(
-        subject=subject,
-        recipients=[email],
-        body=html,
-        subtype=MessageType.html
-    )
+    payload = {
+        'sender': {'email': sender_email, 'name': 'Universal Scrobbler'},
+        'to': [{'email': email}],
+        'subject': subject,
+        'htmlContent': html
+    }
 
-    fm = FastMail(conf)
-    await fm.send_message(message)
+    try:
+        response = requests.post(url, json=payload, headers=headers)
+        if response.status_code == 201:
+            print(f'Email sent successfully to {email}')
+        else:
+            print(f"Brevo error: {response.text}")
+
+    except Exception as e:
+        print(f"Email exception: {e}")
 
 
 # Handle request endpoint
