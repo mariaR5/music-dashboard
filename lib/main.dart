@@ -137,6 +137,7 @@ Future<void> main() async {
   runApp(
     MaterialApp(
       theme: ThemeData(
+        fontFamily: 'NotoSans',
         scaffoldBackgroundColor: Color(0xFF1A1A1A),
         colorScheme: const ColorScheme(
           brightness: Brightness.dark,
