@@ -3,6 +3,7 @@ import json
 import time
 import random
 import requests
+import cloudscraper
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
