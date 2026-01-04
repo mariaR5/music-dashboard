@@ -23,7 +23,6 @@ class NowPlaying extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Album art, song name and artist
         Align(
           alignment: Alignment.center,
           child: Column(
@@ -33,6 +32,7 @@ class NowPlaying extends StatelessWidget {
                 alignment: Alignment.center,
                 clipBehavior: Clip.none,
                 children: [
+                  // Background audio wave
                   if (isAnimating)
                     Positioned(
                       width: 350,
@@ -43,25 +43,32 @@ class NowPlaying extends StatelessWidget {
                       ),
                     ),
 
-                  Container(
-                    height: 200,
-                    width: 200,
+                  // Album art
+                  Material(
+                    elevation: 8,
+                    borderRadius: BorderRadius.circular(16),
                     color: colors.surface,
-                    child: ClipRRect(
-                      child: isLoading
-                          ? Center(
-                              child: CircularProgressIndicator(
-                                color: colors.secondary,
-                              ),
-                            )
-                          : imageUrl != null
-                          ? Image.network(imageUrl!, fit: BoxFit.cover)
-                          : Icon(Icons.music_note, color: colors.secondary),
+                    clipBehavior: Clip.antiAlias,
+                    child: SizedBox(
+                      height: 200,
+                      width: 200,
+                      child: ClipRRect(
+                        child: isLoading
+                            ? Center(
+                                child: CircularProgressIndicator(
+                                  color: colors.secondary,
+                                ),
+                              )
+                            : imageUrl != null
+                            ? Image.network(imageUrl!, fit: BoxFit.cover)
+                            : Icon(Icons.music_note, color: colors.secondary),
+                      ),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 10),
+              // Song name and artist
               Text(
                 title,
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),

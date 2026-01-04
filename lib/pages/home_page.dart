@@ -188,10 +188,8 @@ class _HomePageState extends State<HomePage> {
                                 child: CircleAvatar(
                                   radius: 25,
                                   backgroundColor: colors.surface,
-                                  child: Icon(
-                                    Icons.person,
-                                    color: Colors.white,
-                                    size: 30,
+                                  backgroundImage: AssetImage(
+                                    'assets/images/avatar.jpeg',
                                   ),
                                 ),
                               ),

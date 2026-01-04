@@ -339,15 +339,12 @@ class _ProfilePageState extends State<ProfilePage> {
                   const SizedBox(height: 20),
                   Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: sageGreen,
+                      CircleAvatar(
+                        radius: 50,
+                        backgroundColor: colors.surface,
+                        backgroundImage: AssetImage(
+                          'assets/images/avatar.jpeg',
                         ),
-                        child: const Icon(Icons.person, size: 50),
                       ),
                       const SizedBox(width: 20),
                       Column(
