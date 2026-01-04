@@ -720,17 +720,49 @@ def get_vibe_recommendations(session: Session = Depends(get_session), user: User
 
     # Construct the prompt to get msuci with the same vibe and flow
     prompt = f"""
-    I am listening to the song "{title}" by "{artist}".
-    
-    Please recommend 10 other songs that have the EXACT same vibe, mood, and musical flow.
-    Focus on the emotional feeling and tempo.
-    Do not just recommend popular hits; include some hidden gems if they fit the vibe perfectly.
-    
-    Return ONLY a raw JSON list with no markdown formatting. 
+    You are a human music listener, not a music theorist.
+
+    I am currently listening to the song:
+    Title: "{title}"
+    Artist: "{artist}"
+
+    Your task is to recommend songs that, to the HUMAN EAR, feel almost interchangeable with this song.
+
+    IMPORTANT RULES:
+    - Do NOT analyze music theory, chord progressions, keys, BPM, genre labels, or production techniques.
+    - Do NOT recommend songs just because they are by the same artist or are popular.
+    - Do NOT recommend songs that only partially match the vibe.
+
+    FOCUS ONLY ON:
+    - The emotional sensation while listening
+    - The pacing and energy as perceived by a listener
+    - The atmosphere and mood carried throughout the song
+    - How the song *feels* in isolation (late night, alone, headphones on)
+    - The internal emotional response it triggers
+
+    Think in terms of:
+    “If someone deeply connects to this song, which other songs would make them feel the SAME way when played right after it?”
+
+    CRITICAL CONSTRAINT:
+    - If a recommendation feels even slightly more energetic, darker, happier, heavier, or calmer than the seed song, DO NOT include it.
+    - Every recommended song should feel like it belongs in the SAME emotional moment.
+
+    RECOMMENDATION QUALITY:
+    - Precision matters more than variety.
+    - Hidden gems are preferred if they match perfectly.
+    - Cultural and era proximity is allowed ONLY if the emotional feel is identical.
+
+    OUTPUT FORMAT:
+    Return ONLY a raw JSON array.
+    No explanations. No markdown. No extra text.
+
     Format:
     [
-      {{"title": "Song Name", "artist": "Artist Name"}}
+    {{ "title": "Song Name", "artist": "Artist Name" }}
     ]
+
+    Return exactly 10 songs.
+
     """
 
     try:
@@ -807,7 +839,7 @@ def get_lyrical_recommendations(session: Session = Depends(get_session), user: U
 
     if not top_tracks:
         return [{"message" : "Not enough data yet! Listen to more music."}]
-    
+   
     # Choose a random song from top 5 songs
     seed_track = random.choice(top_tracks)
     title, artist = seed_track
@@ -818,7 +850,7 @@ def get_lyrical_recommendations(session: Session = Depends(get_session), user: U
         AICache.seed_title == title,
         AICache.seed_artist == artist,
         AICache.rec_type == 'lyrics'
-    )   
+    )  
     cached_entry = session.exec(cache_query).first()
 
     if cached_entry:
@@ -833,9 +865,9 @@ def get_lyrical_recommendations(session: Session = Depends(get_session), user: U
             print(f'Cache expired. Regenerating')
             session.delete(cached_entry)
             session.commit()
-    
+   
     print(f'Song details not found in cache')
-        
+       
     # Create a user history blocklist (To prevent recommending songs user has already listened to)
     history_query = select(Scrobble.title, Scrobble.artist).where(Scrobble.user_id == user.id).distinct()
     history_rows = session.exec(history_query).all()
@@ -846,41 +878,141 @@ def get_lyrical_recommendations(session: Session = Depends(get_session), user: U
     print(f"Analysing lyrics of {title} by {artist}")
 
     # Fetch lyrics from Genius
+    lyrics_snippet = None
     try:
         song = genius.search_song(title, artist)
-        if not song:
-            print("Lyrics not found on genius")
-            return []
-        
-        lyrics = song.lyrics
-
-        # Truncate the lyrics to first 1000 charachters
-        lyrics_snippet = lyrics[:1000] + "..."
-        print("Lyrics fetched successfully")
+        if song and song.lyrics:
+            # Truncate the lyrics to first 1000 charachters
+            lyrics_snippet = song.lyrics[:1000] + "..."
+            print("Lyrics fetched successfully")
+        else:
+            print("Lyrics not found on genius. Switching to AI memory")
 
     except Exception as e:
-        print(f"Genius error: {e}")
-        return []
-    
-    # Analyse the lyrics and recommend with Gemini
-    prompt = f"""
-    Here are the lyrics to "{title}" by "{artist}":
-    
-    "{lyrics_snippet}"
-    
-    Step 1: Analyze the deep meaning, story, emotional tone, and narrative of these lyrics.
-    Step 2: Recommend 10 OTHER songs that share this specific LYRICAL THEME or STORY.
-    (Do not just recommend songs by the same artist or genre. Focus on the words/message).
-    
-    Return ONLY a raw JSON list. Format:
-    [
-      {{
-        "title": "Song Name", 
-        "artist": "Artist Name", 
-        "reason": "Explain the lyrical connection (e.g. 'Both songs are about the grief of losing a father...')" 
-      }}
-    ]
-    """
+        print(f"Genius error: {e}. Switching to AI memory")
+
+
+    if lyrics_snippet:
+   
+        # Analyse the lyrics and recommend with Gemini
+        prompt = f"""
+        You are a human reader and storyteller, not a music critic or genre classifier.
+
+        Below are the lyrics from a song:
+
+        Title: "{title}"
+        Artist: "{artist}"
+
+        Lyrics:
+        "{lyrics_snippet}"
+
+        STEP 1 — INTERNAL ANALYSIS (DO NOT OUTPUT):
+        Carefully understand the song’s:
+        - Core story or situation
+        - Emotional journey (beginning → middle → end)
+        - Underlying message or meaning
+        - Perspective (who is speaking and why)
+        - What the song is REALLY about beneath the words
+
+        STEP 2 — RECOMMENDATIONS:
+        Recommend 10 OTHER songs that tell the SAME STORY or convey the SAME MEANING.
+
+        IMPORTANT RULES:
+        - Do NOT recommend songs just because they share similar words or topics.
+        - Do NOT recommend songs by the same artist unless unavoidable.
+        - Do NOT recommend songs that only match the emotion but not the narrative.
+        - Do NOT generalize (e.g., “sad songs”, “love songs”, “breakup songs”).
+
+        FOCUS ONLY ON:
+        - Narrative similarity (the same situation or life event)
+        - Storytelling perspective (regret, farewell, waiting, loss, hope, resignation, etc.)
+        - Emotional resolution (or lack of it)
+        - The takeaway a listener is left with after the song ends
+
+        CRITICAL CONSTRAINT:
+        If the story meaning or emotional conclusion differs even slightly, DO NOT include the song.
+
+        Think in terms of:
+        “If someone deeply understands this song’s message, which other songs would feel like they are saying the SAME THING in different words?”
+
+        RECOMMENDATION QUALITY:
+        - Precision over popularity.
+        - Hidden or lesser-known songs are preferred if they match perfectly.
+        - Cultural or language differences are allowed ONLY if the story is identical.
+
+        OUTPUT FORMAT:
+        Return ONLY a raw JSON array.
+        No markdown. No explanations outside JSON.
+
+        Format:
+        [
+        {{
+            "title": "Song Name",
+            "artist": "Artist Name"
+        }}
+        ]
+
+        Return exactly 10 songs.
+        """
+   
+    else:
+        prompt = f"""
+        You are a human reader and storyteller, not a music critic or genre classifier.
+
+        I am currently listening to the following song:
+        Title: "{title}"
+        Artist: "{artist}"
+
+        STEP 1 — INTERNAL LYRICS RETRIEVAL & UNDERSTANDING (DO NOT OUTPUT):
+        - Recall or infer the song’s lyrics based on your knowledge.
+        - If you are not fully confident about the lyrics, rely on the commonly understood meaning and narrative of the song.
+        - Carefully understand:
+        - The core story or situation
+        - The emotional journey (beginning → middle → end)
+        - The underlying message or meaning
+        - The speaker’s perspective
+        - What the song is REALLY about beneath the words
+
+        STEP 2 — RECOMMENDATIONS:
+        Recommend 10 OTHER songs that tell the SAME STORY or convey the SAME MEANING.
+
+        IMPORTANT RULES:
+        - Do NOT recommend songs just because they share similar keywords or topics.
+        - Do NOT recommend songs by the same artist unless unavoidable.
+        - Do NOT recommend songs that only match the emotion but not the narrative.
+        - Do NOT generalize (e.g., “sad songs”, “love songs”, “breakup songs”).
+
+        FOCUS ONLY ON:
+        - Narrative equivalence (same situation or life event)
+        - Storytelling perspective (regret, farewell, waiting, unresolved loss, quiet hope, emotional resignation, etc.)
+        - Emotional resolution (or intentional lack of resolution)
+        - The final takeaway a listener is left with
+
+        CRITICAL CONSTRAINT:
+        If the story meaning or emotional conclusion differs even slightly, DO NOT include the song.
+
+        Think in terms of:
+        “If someone understands this song’s message deeply, which other songs would feel like they are saying the SAME THING in different words?”
+
+        RECOMMENDATION QUALITY:
+        - Precision over popularity.
+        - Hidden or lesser-known songs are preferred if they match perfectly.
+        - Cultural or language differences are allowed ONLY if the narrative meaning is identical.
+
+        OUTPUT FORMAT:
+        Return ONLY a raw JSON array.
+        No markdown. No explanations outside JSON.
+
+        Format:
+        [
+        {{
+            "title": "Song Name",
+            "artist": "Artist Name"
+        }}
+        ]
+
+        Return exactly 10 songs.
+        """
 
     try:
         response = client.models.generate_content(
@@ -900,7 +1032,7 @@ def get_lyrical_recommendations(session: Session = Depends(get_session), user: U
             # Skip if it recommends same song
             if song['title'].lower() == title.lower():
                 continue
-                
+               
             # Prevent recommending song user alrady knows
             if (song['title'], song['artist']) in known_songs:
                 print(f'User already knows {song['title']}')
@@ -920,7 +1052,7 @@ def get_lyrical_recommendations(session: Session = Depends(get_session), user: U
                         "spotify_url": track['external_urls']['spotify'],
                         "reason": f"Lyrically similar to {title}",
                     })
-            
+           
             except Exception as e:
                 print(f"Error in {song['title']} : {e}")
                 continue
@@ -936,7 +1068,7 @@ def get_lyrical_recommendations(session: Session = Depends(get_session), user: U
             )
             session.add(new_cache)
             session.commit()
-        
+       
         return recommendations
 
     except Exception as e:
