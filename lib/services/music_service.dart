@@ -18,7 +18,7 @@ class MusicService {
       final token = await AuthService.getToken();
 
       final uri = Uri.parse(
-        '$baseUrl/track/image',
+        '$baseUrl/scrobble/track/image',
       ).replace(queryParameters: {'title': title, 'artist': artist});
       final response = await http.get(
         uri,
@@ -40,7 +40,7 @@ class MusicService {
     try {
       final token = await AuthService.getToken();
       final response = await http.get(
-        Uri.parse('$baseUrl/history?limit=10'),
+        Uri.parse('$baseUrl/scrobble/history?limit=10'),
         headers: {"Authorization": "Bearer $token"},
       );
 
