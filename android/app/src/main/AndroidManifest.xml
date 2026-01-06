@@ -5,17 +5,17 @@
     <uses-permission android:name="android.permission.INTERNET" />
     
     <application
-        android:label="scrobbler"
+        android:label="@string/appName"
         android:name="${applicationName}"
         android:usesCleartextTraffic="true"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/laucher_icon">
         
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:taskAffinity=""
-            android:theme="@style/LaunchTheme"
+            android:theme="@style/Theme.App.Transparent"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
@@ -34,7 +34,7 @@
         <!-- ADD THIS SERVICE -->
         <service
             android:name="im.zoe.labs.flutter_notification_listener.NotificationsHandlerService"
-            android:label="Scrobbler"
+            android:label="@string/appName"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
             android:exported="true">
             <intent-filter>
@@ -54,3 +54,4 @@
         </intent>
     </queries>
 </manifest>
+
