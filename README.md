@@ -14,6 +14,11 @@ Most scrobblers rely on the Spotify API, meaning they ignore your local files, Y
 
 Cue is different. It lives on your phone, listening to your notification shade. If a song is playing on any allowed app, we track it, verify it against Spotify's database, and use it to feed a powerful AI recommendation engine.
 
+Cue was built to solve a personal frustration: music listening today is fragmented across platforms, but our stats are not. Your Spotify Wrapped doesn’t define your taste — your listening habits do.
+
+Cue only processes music playback notifications from explicitly allowed apps and does not read message or personal notifications.
+
+
 ## Key Features
 
 ### Universal Scrobbling
@@ -143,9 +148,16 @@ Want to run this yourself? Follow these steps.
 | ![Home Screen](assets/images/home.jpeg) | ![Recommendations](assets/images/discover.jpeg) | ![Dashboard](assets/images/dashboard.jpeg) |
 | *Real-time detection with animated wave visualizer* | *Context-aware suggestions based on lyrics & vibes* | *Monthly & Yearly stats with detailed breakdowns* |
 
+## Project Status
+
+Cue is an actively evolving project.  
+The current version demonstrates the core architecture and recommendation systems, but there is significant room for expansion — including deeper insights, improved recommendation intelligence, and performance optimizations.
+
+
 
 ## License
 
 Distributed under the MIT License. See LICENSE for more information.
 
-Made with love by Maria
+Built with care by Maria — blending music, AI, and systems engineering.
+
