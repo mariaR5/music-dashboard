@@ -429,8 +429,6 @@ def get_credits_recommendations(session: Session = Depends(get_session), user: U
 
     # Create a set of tuples of history
     known_songs = {(row.title.lower(), row.artist.lower()) for row in history_rows}
-
-    now = datetime.now(timezone.utc)
     
     # get top 5 songs
     top_tracks = get_user_top_tracks(session, user, limit=5)
@@ -448,6 +446,30 @@ def get_credits_recommendations(session: Session = Depends(get_session), user: U
     # Iterate through each track until we find a song with songwriter and other works
     for track in track_candidates:
         title, artist = track
+
+        # Cache check
+        print(f"Checking cache for credits: {title} - {artist}")
+        cache_query = select(AICache).where(
+            AICache.seed_title == title,
+            AICache.seed_artist == artist,
+            AICache.rec_type == 'credits'
+        )
+        cached_entry = session.exec(cache_query).first()
+
+        if cached_entry:
+            now = datetime.now(timezone.utc)
+            age = now - cached_entry.created_at
+
+            if age.days < 7:
+                print(f"Found {title} in cache. Returning stored recs")
+                return json.loads(cached_entry.data_json)
+            
+            else:
+                print(F"Cache expired. Regenerating")
+                session.delete(cached_entry)
+                session.commit()
+
+    
         print(f"Credits search for: {title} - {artist}")
 
         try:
@@ -593,6 +615,17 @@ def get_credits_recommendations(session: Session = Depends(get_session), user: U
                     continue
         
         if recommendations:
+            # Save to cache
+            print(f"Saving credit recs to cache")
+            new_cache = AICache(
+                seed_title=title,
+                seed_artist=artist,
+                rec_type='credits',
+                data_json=json.dumps(recommendations)
+            )
+            session.add(new_cache)
+            session.commit()
+
             return recommendations
         else:
             print("Found nothing valid. Retrying next song\n")
