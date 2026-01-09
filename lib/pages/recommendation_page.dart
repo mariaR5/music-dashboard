@@ -17,17 +17,65 @@ class RecommendationPage extends StatefulWidget {
 class _RecommendationPageState extends State<RecommendationPage> {
   final String baseUrl = dotenv.env['API_BASE_URL']!;
 
-  List<Scrobble> _flowRecs = [];
-  List<Scrobble> _lyricRecs = [];
-  List<Scrobble> _creditRecs = [];
-  List<Scrobble> _artistRecs = [];
-  List<Scrobble> _sampleRecs = [];
+  List<Scrobble>? _flowRecs;
+  List<Scrobble>? _lyricRecs;
+  List<Scrobble>? _creditRecs;
+  List<Scrobble>? _artistRecs;
+  List<Scrobble>? _sampleRecs;
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    fetchRecommendations();
+    fetchAll();
+  }
+
+  Future<void> fetchAll() async {
+    // Set to null to show loaders
+    setState(() {
+      _flowRecs = null;
+      _lyricRecs = null;
+      _creditRecs = null;
+      _artistRecs = null;
+      _sampleRecs = null;
+    });
+
+    final token = await AuthService.getToken();
+    final headers = {"Authorization": "Bearer $token"};
+
+    // Send all requests in parallel
+    _fetchCategory('vibes', headers, (data) => _flowRecs = data);
+    _fetchCategory('lyrics', headers, (data) => _lyricRecs = data);
+    _fetchCategory('credits', headers, (data) => _creditRecs = data);
+    _fetchCategory('artists', headers, (data) => _artistRecs = data);
+    _fetchCategory('samples', headers, (data) => _sampleRecs = data);
+  }
+
+  Future<void> _fetchCategory(
+    String endpoint,
+    Map<String, String> headers,
+    Function(List<Scrobble>) updateState,
+  ) async {
+    try {
+      final response = await http.get(
+        Uri.parse("$baseUrl/recommend/$endpoint"),
+        headers: headers,
+      );
+      final data = _parseRecs(response);
+
+      if (mounted) {
+        setState(() {
+          updateState(data);
+        });
+      }
+    } catch (e) {
+      print("Error fetching $endpoint: $e");
+      if (mounted) {
+        setState(() {
+          updateState([]); // On error, set to empty so that loader disappears
+        });
+      }
+    }
   }
 
   List<Scrobble> _parseRecs(http.Response response) {
@@ -54,38 +102,6 @@ class _RecommendationPageState extends State<RecommendationPage> {
     return [];
   }
 
-  Future<void> fetchRecommendations() async {
-    setState(() => _isLoading = true);
-
-    try {
-      final token = await AuthService.getToken();
-      final headers = {"Authorization": "Bearer $token"};
-
-      final results = await Future.wait([
-        http.get(Uri.parse("$baseUrl/recommend/vibes"), headers: headers),
-        http.get(Uri.parse("$baseUrl/recommend/lyrics"), headers: headers),
-        http.get(Uri.parse("$baseUrl/recommend/credits"), headers: headers),
-        http.get(Uri.parse("$baseUrl/recommend/artists"), headers: headers),
-        http.get(Uri.parse("$baseUrl/recommend/samples"), headers: headers),
-      ]);
-
-      if (mounted) {
-        setState(() {
-          // Process flow recs
-          _flowRecs = _parseRecs(results[0]);
-          _lyricRecs = _parseRecs(results[1]);
-          _creditRecs = _parseRecs(results[2]);
-          _artistRecs = _parseRecs(results[3]);
-          _sampleRecs = _parseRecs(results[4]);
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      print("Error fetching recommendations: $e");
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
   Future<void> _launchSpotify(String url) async {
     final Uri uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
@@ -93,81 +109,104 @@ class _RecommendationPageState extends State<RecommendationPage> {
     }
   }
 
+  Widget _buildSectionLoader({
+    required List<Scrobble>? items,
+    required String defaultTitle,
+    bool circular = false,
+    bool showReason = false,
+  }) {
+    // Loading state
+    if (items == null) {
+      return Container(
+        height: 250,
+        margin: const EdgeInsets.only(bottom: 30),
+        child: const Center(
+          child: CircularProgressIndicator(color: Colors.white),
+        ),
+      );
+    }
+
+    // Empty state
+    if (items.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    // Data state
+    final title = items.first.reason ?? defaultTitle;
+
+    return Column(
+      children: [
+        RecommendSection(
+          title: title,
+          items: items,
+          onTap: _launchSpotify,
+          circularImage: circular,
+          showItemReason: showReason,
+        ),
+        const SizedBox(height: 30),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-
-    if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(color: Colors.white),
-      );
-    }
-
-    final bool isEmpty =
-        _flowRecs.isEmpty &&
-        _lyricRecs.isEmpty &&
-        _creditRecs.isEmpty &&
-        _artistRecs.isEmpty &&
-        _sampleRecs.isEmpty;
-
-    if (isEmpty) {
-      return Scaffold(
-        body: Center(child: Text('Listen to some music and check back later')),
-      );
-    }
 
     return Scaffold(
       backgroundColor: colors.primary,
       appBar: AppBar(title: Text('Discover similar music')),
       body: RefreshIndicator(
         color: Colors.white,
-        onRefresh: fetchRecommendations,
+        onRefresh: fetchAll,
         child: SafeArea(
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
               // 1. Vibe Recommender
-              if (_flowRecs.isNotEmpty)
-                RecommendSection(
-                  title: _flowRecs.first.reason ?? '',
-                  items: _flowRecs,
-                  onTap: _launchSpotify,
-                ),
-              const SizedBox(height: 30),
+              _buildSectionLoader(
+                items: _flowRecs,
+                defaultTitle: 'Listen to the same feels',
+              ),
+
               // 2. Lyrical Recommender
-              if (_lyricRecs.isNotEmpty)
-                RecommendSection(
-                  title: _lyricRecs.first.reason ?? '',
-                  items: _lyricRecs,
-                  onTap: _launchSpotify,
-                ),
-              const SizedBox(height: 30),
+              _buildSectionLoader(
+                items: _lyricRecs,
+                defaultTitle: 'Listen to the same story',
+              ),
+
               // 3. Artist Recommender
-              if (_artistRecs.isNotEmpty)
-                RecommendSection(
-                  title: _artistRecs.first.reason ?? '',
-                  items: _artistRecs,
-                  onTap: _launchSpotify,
-                  circularImage: true,
-                ),
+              _buildSectionLoader(
+                items: _artistRecs,
+                defaultTitle: 'Explore more artists',
+                circular: true,
+              ),
 
               // 4. Credits Recommender
-              if (_creditRecs.isNotEmpty)
-                RecommendSection(
-                  title: _creditRecs.first.reason ?? '',
-                  items: _creditRecs,
-                  onTap: _launchSpotify,
-                ),
-              const SizedBox(height: 30),
+              _buildSectionLoader(
+                items: _creditRecs,
+                defaultTitle: 'Listen to the same producers',
+              ),
+
               // 5. Sample Recommender
-              if (_sampleRecs.isNotEmpty)
-                RecommendSection(
-                  title: 'Samples of your favorites',
-                  items: _sampleRecs,
-                  showItemReason: true,
-                  onTap: _launchSpotify,
+              _buildSectionLoader(
+                items: _sampleRecs,
+                defaultTitle: 'Samples of your favorites',
+                showReason: true,
+              ),
+
+              if (_flowRecs != null &&
+                  _flowRecs!.isEmpty &&
+                  _lyricRecs != null &&
+                  _lyricRecs!.isEmpty &&
+                  _creditRecs != null &&
+                  _creditRecs!.isEmpty &&
+                  _artistRecs != null &&
+                  _artistRecs!.isEmpty &&
+                  _sampleRecs != null &&
+                  _sampleRecs!.isEmpty)
+                const Center(
+                  child: Text('Listen to more music to get recommendations'),
                 ),
-              const SizedBox(height: 30),
             ],
           ),
         ),
