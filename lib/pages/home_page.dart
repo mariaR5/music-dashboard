@@ -115,13 +115,13 @@ class _HomePageState extends State<HomePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 InfoBullet(
-                  title: 'How it works',
+                  title: 'How it Works',
                   text:
                       "This app reads the 'Now Playing' notifications from your status bar. It only detects music from the apps listed in your Profile > Allowed Packages.",
                 ),
                 SizedBox(height: 16),
                 InfoBullet(
-                  title: "Keep it running",
+                  title: "Keep it Running",
                   text:
                       "The app must be open in the background to detect songs. For the best experience, lock this app in your 'Recent Apps' screen so your phone doesn't close it to save battery.",
                 ),

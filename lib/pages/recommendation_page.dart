@@ -22,7 +22,6 @@ class _RecommendationPageState extends State<RecommendationPage> {
   List<Scrobble>? _creditRecs;
   List<Scrobble>? _artistRecs;
   List<Scrobble>? _sampleRecs;
-  bool _isLoading = true;
 
   @override
   void initState() {
@@ -111,7 +110,7 @@ class _RecommendationPageState extends State<RecommendationPage> {
 
   Widget _buildSectionLoader({
     required List<Scrobble>? items,
-    required String defaultTitle,
+    required String? defaultTitle,
     bool circular = false,
     bool showReason = false,
   }) {
@@ -132,12 +131,12 @@ class _RecommendationPageState extends State<RecommendationPage> {
     }
 
     // Data state
-    final title = items.first.reason ?? defaultTitle;
+    final title = defaultTitle ?? items.first.reason;
 
     return Column(
       children: [
         RecommendSection(
-          title: title,
+          title: title!,
           items: items,
           onTap: _launchSpotify,
           circularImage: circular,
@@ -163,29 +162,20 @@ class _RecommendationPageState extends State<RecommendationPage> {
             padding: const EdgeInsets.all(16),
             children: [
               // 1. Vibe Recommender
-              _buildSectionLoader(
-                items: _flowRecs,
-                defaultTitle: 'Listen to the same feels',
-              ),
+              _buildSectionLoader(items: _flowRecs, defaultTitle: null),
 
               // 2. Lyrical Recommender
-              _buildSectionLoader(
-                items: _lyricRecs,
-                defaultTitle: 'Listen to the same story',
-              ),
+              _buildSectionLoader(items: _lyricRecs, defaultTitle: null),
 
               // 3. Artist Recommender
               _buildSectionLoader(
                 items: _artistRecs,
-                defaultTitle: 'Explore more artists',
+                defaultTitle: null,
                 circular: true,
               ),
 
               // 4. Credits Recommender
-              _buildSectionLoader(
-                items: _creditRecs,
-                defaultTitle: 'Listen to the same producers',
-              ),
+              _buildSectionLoader(items: _creditRecs, defaultTitle: null),
 
               // 5. Sample Recommender
               _buildSectionLoader(
