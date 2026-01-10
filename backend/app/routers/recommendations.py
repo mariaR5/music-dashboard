@@ -2,7 +2,7 @@ import random
 import json
 import time
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import SQLModel, Session, select
+from sqlmodel import SQLModel, Session, select, delete
 from datetime import datetime, timezone, timedelta
 from collections import Counter
 from sqlalchemy import func
@@ -44,7 +44,7 @@ def get_vibe_recommendations(session: Session = Depends(get_session), user: User
 
     if cached_entry:
         # Check if cache is more than 7 days old
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         age = now - cached_entry.created_at
 
         if age.days < 7:
@@ -198,7 +198,7 @@ def get_lyrical_recommendations(session: Session = Depends(get_session), user: U
 
     if cached_entry:
         # Check if cache is more than 7 days old
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         age = now - cached_entry.created_at
 
         if age.days < 7:
@@ -955,3 +955,9 @@ def get_sample_recommendations(session: Session = Depends(get_session), user: Us
 
     return recommendations 
 
+
+@router.delete("/cache/clear")
+def clear_cache(session: Session = Depends(get_session)):
+    session.exec(delete(AICache))
+    session.commit()
+    return {"message": "AI Cache cleared successfully"}

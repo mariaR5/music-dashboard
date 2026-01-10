@@ -45,7 +45,7 @@ class AICache(SQLModel, table=True):
     seed_artist: str
     rec_type: str
     data_json: str
-    created_at: datetime = Field(default_factory=lambda: datetime.utcnow())
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 # Handle request endpoint
 class ScrobbleRequest(SQLModel):
