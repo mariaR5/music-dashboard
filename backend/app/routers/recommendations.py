@@ -20,6 +20,13 @@ from app.services.genius import genius
 
 router = APIRouter(prefix="/recommend", tags=["Recommendations"])
 
+def get_cache_age(cached_at: datetime):
+    if cached_at.tzinfo is None:
+        cached_at = cached_at.replace(tzinfo=timezone.utc)
+    
+    now = datetime.now(timezone.utc)
+    return now - cached_at
+
 
 # Recommendation engine => Recommend songs with the same flow and vibe as one of the top 5 songs
 @router.get("/vibes")
@@ -44,8 +51,7 @@ def get_vibe_recommendations(session: Session = Depends(get_session), user: User
 
     if cached_entry:
         # Check if cache is more than 7 days old
-        now = datetime.now(timezone.utc)
-        age = now - cached_entry.created_at
+        age = get_cache_age(cached_entry.created_at)
 
         if age.days < 7:
             print(f'Found {title} in cache. Returning stored recs')
@@ -198,8 +204,7 @@ def get_lyrical_recommendations(session: Session = Depends(get_session), user: U
 
     if cached_entry:
         # Check if cache is more than 7 days old
-        now = datetime.now(timezone.utc)
-        age = now - cached_entry.created_at
+        age = get_cache_age(cached_entry.created_at)
 
         if age.days < 7:
             print(f'Found {title} in cache. Returning stored recs')
@@ -457,8 +462,7 @@ def get_credits_recommendations(session: Session = Depends(get_session), user: U
         cached_entry = session.exec(cache_query).first()
 
         if cached_entry:
-            now = datetime.now(timezone.utc)
-            age = now - cached_entry.created_at
+            age = get_cache_age(cached_entry.created_at)
 
             if age.days < 7:
                 print(f"Found {title} in cache. Returning stored recs")
